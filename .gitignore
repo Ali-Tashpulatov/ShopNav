@@ -1,0 +1,25 @@
+# ── Dependencies ────────────────────────────────────────────
+node_modules/
+
+# ── Environment Variables ────────────────────────────────────
+.env
+
+# ── SQLite Database Files ────────────────────────────────────
+# The .db file(s) will be regenerated on first run.
+# On Render with a Persistent Disk, these are stored at /var/data/.
+*.db
+*.db-shm
+*.db-wal
+
+# ── OS & Editor Junk ─────────────────────────────────────────
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# ── Logs ─────────────────────────────────────────────────────
+*.log
+npm-debug.log*
+
+# ── Misc ─────────────────────────────────────────────────────
+scratch/

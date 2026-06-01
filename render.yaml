@@ -1,0 +1,40 @@
+# ═══════════════════════════════════════════════════════════
+#  render.yaml — Render Blueprint
+#  Defines your ShopNav service for one-click deploy on Render.
+#  Docs: https://render.com/docs/blueprint-spec
+# ═══════════════════════════════════════════════════════════
+
+services:
+  - type: web
+    name: shopnav
+    runtime: node
+    region: oregon          # Free tier region
+    plan: free
+    branch: main            # Deploy from the main branch
+
+    # How to build and start
+    buildCommand: npm install
+    startCommand: node server.js
+
+    # Health check — Render pings this to confirm the app is alive
+    healthCheckPath: /health
+
+    # Environment variables available to the running process
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        generateValue: false   # Render injects PORT automatically
+      # To enable a persistent disk for SQLite, uncomment the line below
+      # and also add the disk section at the bottom of this file.
+      # - key: DB_PATH
+      #   value: /var/data/shopnav.db
+
+    # ── Optional: Persistent Disk for SQLite ──────────────────
+    # Uncomment this block if you upgrade to a paid Render plan ($7/mo)
+    # to keep your database across deploys and restarts.
+    #
+    # disk:
+    #   name: shopnav-data
+    #   mountPath: /var/data
+    #   sizeGB: 1

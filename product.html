@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Product — ShopNav</title>
+<link rel="stylesheet" href="css/main.css"/>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+.page-wrap{padding-top:64px;background:var(--cream);min-height:100vh}
+.bc{font-size:.82rem;color:var(--muted);padding:1.2rem 0;display:flex;gap:.4rem}
+.bc a{color:var(--muted)}.bc a:hover{color:var(--forest)}
+.playout{display:grid;grid-template-columns:1fr;gap:2.5rem;padding-bottom:3rem;align-items:start}
+@media(min-width:800px){.playout{grid-template-columns:1fr 1.8fr}}
+.pimg{background:var(--warm);border-radius:20px;aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:7rem;border:1px solid var(--sand);position:relative;overflow:hidden}
+.pimg img{width:100%;height:100%;object-fit:contain;mix-blend-mode:multiply}
+.ptitle{font-family:'Playfair Display',serif;font-size:2rem;font-weight:900;line-height:1.1;margin-bottom:.4rem}
+.pbrand{color:var(--muted);font-size:.9rem;margin-bottom:1.2rem}
+.pprice{font-size:2.2rem;font-weight:700;color:var(--forest)}
+.punit{font-size:.88rem;color:var(--muted);font-family:'DM Mono',monospace;margin-top:.2rem}
+.tab-row{display:flex;border-bottom:2px solid var(--sand);margin:1.5rem 0}
+.tab{padding:.6rem 1.2rem;font-weight:600;font-size:.88rem;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .2s}
+.tab.active{color:var(--forest);border-bottom-color:var(--forest)}
+.tab-panel{display:none}.tab-panel.active{display:block}
+.scr{display:flex;align-items:center;gap:1rem;padding:.9rem 1.1rem;border-radius:12px;border:1px solid var(--sand);background:var(--white);margin-bottom:.6rem;cursor:pointer;transition:all .2s}
+.scr:hover{transform:translateY(-2px);border-color:#34d399;box-shadow:0 8px 24px rgba(5,150,105,0.12)}
+.scr.cheapest{background:rgba(52,211,153,0.06);border-color:#34d399}
+.scr-av{width:44px;height:44px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0}
+.scr-info{flex:1}.scr-name{font-weight:600;font-size:.92rem}.scr-sub{font-size:.76rem;color:var(--muted);margin-top:2px}
+.scr-p{font-weight:700;font-size:1.05rem;color:var(--forest);text-align:right}
+.scr-u{font-size:.72rem;color:var(--muted);font-family:'DM Mono',monospace}
+.fresh-box{background:var(--white);border:1px solid var(--sand);border-radius:14px;padding:1.2rem;margin-top:1rem}
+.pat-box{background:var(--accent-l);border:1px solid rgba(242,160,59,.3);border-radius:12px;padding:.9rem 1.1rem;display:flex;align-items:center;gap:.75rem;font-size:.88rem;color:var(--rust-d);margin-top:1rem}
+.chart-wrap{background:var(--white);border:1px solid var(--sand);border-radius:14px;padding:1.2rem}
+.rel-grid{display:grid;grid-template-columns:1fr 1fr;gap:.75rem}
+.qty-selector{display:flex;align-items:center;background:var(--forest);color:var(--white);border-radius:100px;height:44px;overflow:hidden;width:100%}
+.qty-selector button{flex:1;background:none;border:none;color:var(--white);font-weight:700;font-size:1.4rem;cursor:pointer;height:100%;transition:background .2s}
+.qty-selector button:hover{background:rgba(255,255,255,.1)}
+.qty-selector span{flex:1;text-align:center;font-weight:600;font-size:1.05rem}
+</style>
+</head>
+<body>
+<nav class="navbar">
+  <a href="index.html" class="navbar-logo">
+    <span class="logo-icon">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
+        <line x1="3" y1="6" x2="21" y2="6"></line>
+        <path d="M16 10a4 4 0 0 1-8 0"></path>
+      </svg>
+    </span>
+    ShopNav<div class="logo-dot"></div>
+  </a>
+  <div class="navbar-links">
+    <a href="index.html" data-i18n="nav_home">Home</a><a href="search.html" class="active" data-i18n="nav_search">Search</a>
+    <a href="cook.html" data-i18n="nav_cook">Cook Mode</a><a href="stores.html" data-i18n="nav_stores">Stores</a><a href="cart.html" data-i18n="nav_cart">Cart</a>
+  </div>
+  <div class="navbar-actions"><a href="#">❤️</a><a href="#">👤</a></div>
+  <div class="navbar-burger" onclick="toggleMenu()">☰</div>
+</nav>
+<div class="page-wrap">
+<div class="container">
+  <div class="bc"><a href="index.html" data-i18n="home_breadcrumb">Home</a>/<a href="search.html" data-i18n="search_breadcrumb">Search</a>/<span id="bcN">Product</span></div>
+  <div class="playout">
+    <div>
+      <div class="pimg" id="pImgContainer"><span id="pEmoji" style="font-size:6rem">🥛</span></div>
+      <div style="display:flex;gap:.75rem;margin-top:1rem">
+        <div id="cartControls" style="flex:1">
+          <button class="btn btn-primary w-full" id="cartBtn" onclick="addCart()"><span>🛒</span> <span data-i18n="btn_add_cart">Add to Cart</span></button>
+        </div>
+        <button class="btn btn-ghost btn-icon" id="favBtn" onclick="togFav()">🤍</button>
+      </div>
+      <div class="pat-box" id="patBox" style="display:none"></div>
+      <div class="fresh-box" id="freshBox" style="display:none">
+        <div class="label" data-i18n="freshness_reports_title">Freshness Reports</div>
+        <div id="freshBars" style="display:flex;gap:.5rem;height:8px;border-radius:4px;overflow:hidden;margin:.75rem 0"></div>
+        <div id="freshTxt" style="font-size:.8rem;color:var(--muted)"></div>
+        <div style="display:flex;gap:.5rem;margin-top:.75rem">
+          <button class="btn btn-ghost btn-sm" onclick="submitFreshReport()"><span>✅</span> <span data-i18n="looks_fresh_btn">Looks fresh</span></button>
+          <button class="btn btn-ghost btn-sm" onclick="submitNearExpiryReport()"><span>⚠️</span> <span data-i18n="near_expiry_btn">Near expiry</span></button>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="pbrand" id="pBrand"></div>
+      <h1 class="ptitle" id="pTitle">Loading…</h1>
+      <div style="display:flex;align-items:baseline;gap:1rem;flex-wrap:wrap;margin-bottom:.5rem">
+        <div><div class="pprice" id="pPrice">—</div><div class="punit" id="pUnit"></div></div>
+        <div id="pAvail"></div>
+      </div>
+      <div style="font-size:.84rem;color:var(--muted);margin-bottom:1.5rem" id="pWeight"></div>
+      <div id="pDesc" style="font-size:1rem;color:var(--muted);margin:-0.5rem 0 1.5rem;line-height:1.6;display:none"></div>
+      <div class="tab-row">
+        <div class="tab active" onclick="sw('stores',this)">🏪 <span data-i18n="filter_stores">Stores</span></div>
+        <div class="tab" onclick="sw('price',this)">📈 <span data-i18n="prod_history">Price History</span></div>
+        <div class="tab" onclick="sw('related',this)">💡 <span data-i18n="sec_categories">Related</span></div>
+      </div>
+      <div class="tab-panel active" id="tab-stores"><div id="storeList"></div></div>
+      <div class="tab-panel" id="tab-price">
+        <div style="margin-bottom:.75rem">
+          <span data-i18n="store_label">Store</span>: <select id="hStore" onchange="renderChart()" style="border:1px solid var(--sand);border-radius:8px;padding:.3rem .6rem;font-size:.84rem;outline:none"></select>
+        </div>
+        <div class="chart-wrap"><canvas id="priceChart" height="200"></canvas></div>
+      </div>
+      <div class="tab-panel" id="tab-related"><div class="rel-grid" id="relGrid"></div></div>
+    </div>
+  </div>
+</div>
+</div>
+<script src="js/i18n.js"></script>
+<script src="js/data.js"></script>
+<script>
+const params=new URLSearchParams(location.search);
+let prod=getProductById(params.get('id'));
+let chart=null;
+const favs=JSON.parse(localStorage.getItem('ff_favs')||'[]');
+let selectedStoreId = null;
+if(!prod){document.getElementById('pTitle').textContent='Product not found';}else{init();}
+function init(){
+  const p=prod;
+  const activeStoreId = params.get('store') || null;
+  if (activeStoreId) {
+    p.storeId = activeStoreId;
+  } else {
+    delete p.storeId;
+  }
+  const activeStoreObj = activeStoreId ? (typeof STORES !== 'undefined' ? STORES : []).find(s => s.id === activeStoreId) || null : null;
+
+  // Update Breadcrumb "Search" link if activeStoreId is set
+  const searchBreadcrumb = document.querySelector('.bc a[href="search.html"]');
+  if (searchBreadcrumb && activeStoreId) {
+    searchBreadcrumb.href = `search.html?store=${activeStoreId}`;
+    if (activeStoreObj) {
+      searchBreadcrumb.textContent = activeStoreObj.name;
+    }
+  }
+
+  // Set document title
+  document.title=p.name + (activeStoreObj ? ' at ' + activeStoreObj.name : '') + ' — ShopNav';
+  document.getElementById('bcN').textContent=p.name;
+  if(p.image){
+    document.getElementById('pImgContainer').innerHTML=`<img src="${p.image}" alt="${p.name}">`;
+  } else {
+    document.getElementById('pImgContainer').innerHTML=`<span id="pEmoji" style="font-size:6rem">${p.emoji}</span>`;
+  }
+  document.getElementById('pTitle').textContent=p.name;
+  
+  // Show browsed store indicator if activeStoreObj is set
+  if (activeStoreObj) {
+    document.getElementById('pBrand').innerHTML = `${p.brand} · ${t(CATEGORIES.find(c=>c.id===p.category)?.name||'')} · <span class="badge badge-accent" style="background:var(--forest);color:var(--cream);font-size:0.75rem;padding:0.2rem 0.5rem">${activeStoreObj.emoji} ${activeStoreObj.name}</span>`;
+  } else {
+    document.getElementById('pBrand').textContent=p.brand+' · '+t(CATEGORIES.find(c=>c.id===p.category)?.name||'');
+  }
+
+  document.getElementById('pWeight').textContent=t('package_label').replace('{weight}', p.weight);
+  if(p.description) {
+    const descEl = document.getElementById('pDesc');
+    if (descEl) {
+      descEl.textContent = p.description;
+      descEl.style.display = 'block';
+    }
+  } else {
+    const descEl = document.getElementById('pDesc');
+    if (descEl) descEl.style.display = 'none';
+  }
+
+  // Determine target store to show price/stock details (browsed store if valid, otherwise cheapest)
+  const targetStoreId = (activeStoreId && p.price[activeStoreId] > 0) ? activeStoreId : getCheapestStore(p);
+  if(targetStoreId){
+    const price=p.price[targetStoreId],unit=getUnitPrice(p,targetStoreId);
+    document.getElementById('pPrice').textContent='₸'+price.toLocaleString();
+    if(unit)document.getElementById('pUnit').textContent=unit.value+'₸ '+t('per_'+unit.label.replace('per ',''))+' ('+t('unit_price_label')+')';
+  } else {
+    document.getElementById('pPrice').textContent=t('not_available') || 'Not Available';
+    document.getElementById('pUnit').textContent='';
+  }
+
+  // Stock status at selected/target store
+  const inStock = targetStoreId ? (p.stock[targetStoreId] === 'in') : Object.values(p.stock).some(v=>v==='in');
+  const av=document.getElementById('pAvail');
+  av.className='avail '+(inStock?'in-stock':'out');
+  let avText = inStock ? t('in_stock') : t('out_of_stock');
+  if (inStock && p.stockQuantity !== undefined) {
+    avText += ` (${p.stockQuantity} ${t('products_plural')||'items'} in stock)`;
+  }
+  av.innerHTML=`<div class="avail-dot"></div>${avText}`;
+  if(favs.includes(p.id))document.getElementById('favBtn').textContent='❤️';
+  renderCartControls();
+  const fresh=FRESHNESS[p.id];
+  if(fresh){
+    document.getElementById('freshBox').style.display='block';
+    const tot=fresh.fresh+fresh.warn;
+    document.getElementById('freshBars').innerHTML=`<div style="flex:${fresh.fresh};background:var(--success)"></div><div style="flex:${fresh.warn};background:var(--warn)"></div>`;
+    document.getElementById('freshTxt').textContent=t('freshness_summary').replace('{fresh}', fresh.fresh).replace('{warn}', fresh.warn).replace('{lastReport}', fresh.lastReport);
+  }
+  
+  // Stock pattern for target store
+  const pat=STOCK_PATTERNS[targetStoreId];
+  if(pat){document.getElementById('patBox').style.display='flex';document.getElementById('patBox').innerHTML=pat.icon+' <span><strong>'+t('stock_pattern_label')+':</strong> '+pat.insight+'</span>';}
+  else{document.getElementById('patBox').style.display='none';}
+
+  const stores=getStoresForProduct(p).sort((a,b)=>a.distance-b.distance);
+  
+  // If activeStoreId is set, sort activeStore to the top of the list so it is immediately visible
+  if (activeStoreId) {
+    stores.sort((a, b) => {
+      if (a.id === activeStoreId) return -1;
+      if (b.id === activeStoreId) return 1;
+      return a.distance - b.distance;
+    });
+  }
+
+  const sl=document.getElementById('storeList');
+  sl.innerHTML='';
+  document.getElementById('hStore').innerHTML='';
+  stores.forEach((s,i)=>{
+    const price=p.price[s.id],unit=getUnitPrice(p,s.id),stock=p.stock[s.id]||'out';
+    const stEl=stock==='in'?`<span class="avail in-stock"><div class="avail-dot"></div>${t('in_stock')}</span>`:stock==='low'?`<span class="avail low"><div class="avail-dot"></div>${t('low_stock')}</span>`:`<span class="avail out"><div class="avail-dot"></div>${t('out_of_stock')}</span>`;
+    
+    // Highlight if it's the browsed store
+    const isBrowsed = s.id === activeStoreId;
+    const isCheapest = s.id === getCheapestStore(p);
+    
+    const isSelected = s.id === selectedStoreId;
+    sl.innerHTML+=`<div class="scr ${isBrowsed ? 'cheapest' : (isCheapest ? 'best' : '')} ${isSelected ? 'selected-store' : ''}" onclick="window.location.href='stores.html?store=${s.id}'" style="${isSelected ? 'border-color:var(--forest);background:rgba(45,74,47,0.05)' : ''}">
+      <div class="scr-av" style="background:${s.color}22">${s.emoji}</div>
+      <div class="scr-info">
+        <div class="scr-name">
+          ${s.name}
+          ${isBrowsed ? ` <span class="badge" style="background:var(--forest);color:var(--cream);font-size:0.75rem">${t('browsing_badge') || 'Browsing Store'}</span>` : ''}
+          ${isCheapest && !isBrowsed ? ` <span class="badge badge-accent">${t('best_price')}</span>` : ''}
+        </div>
+        <div class="scr-sub">${s.distance} ${t('km_away')} · ${stEl}</div>
+      </div>
+      <div style="text-align:right; margin-right: 1rem;"><div class="scr-p">₸${price.toLocaleString()}</div>${unit?`<div class="scr-u">${unit.value}₸/${t('per_'+unit.label.replace('per ',''))}</div>`:''}</div>
+      <button class="btn btn-sm ${isSelected ? 'btn-primary' : 'btn-ghost'}" onclick="selectStore('${s.id}', event)">${isSelected ? 'Selected' : 'Select'}</button>
+      <a href="stores.html?store=${s.id}" class="btn btn-ghost btn-sm" onclick="event.stopPropagation()">🗺</a>
+    </div>`;
+    
+    document.getElementById('hStore').innerHTML+=`<option value="${s.id}" ${s.id === targetStoreId ? 'selected' : ''}>${s.emoji} ${s.name}</option>`;
+  });
+  renderChart();
+
+  // Related products filtering & rendering
+  let rel=PRODUCTS.filter(pr=>pr.id!==p.id&&pr.category===p.category);
+  if (activeStoreId) {
+    // Only products available at this store
+    rel = rel.filter(pr => pr.price && pr.price[activeStoreId] > 0);
+  }
+  rel = rel.slice(0,4);
+
+  const rl=document.getElementById('relGrid');
+  rl.innerHTML='';
+  rel.forEach(r=>{
+    const rb=activeStoreId || getCheapestStore(r);
+    const rp=rb?r.price[rb]:0;
+    rl.innerHTML+=`<div class="card" style="cursor:pointer" onclick="location.href='product.html?id=${r.id}${activeStoreId ? '&store=' + activeStoreId : ''}'">
+      <div style="text-align:center;padding:1rem;font-size:2.5rem;display:flex;justify-content:center;height:5rem;align-items:center;">${r.image ? `<img src="${r.image}" style="max-height:100%;max-width:100%;mix-blend-mode:multiply">` : r.emoji}</div>
+      <div style="padding:.5rem .75rem 1rem"><div style="font-weight:600;font-size:.85rem">${r.name}</div>
+      <div style="color:var(--forest);font-weight:700;margin-top:.3rem">₸${rp.toLocaleString()}</div></div></div>`;
+  });
+}
+window.addEventListener('languageChanged', init);
+function renderChart(){
+  const sid=document.getElementById('hStore').value;
+  const hist=getPriceHistory(prod,sid);
+  if(chart)chart.destroy();
+  chart=new Chart(document.getElementById('priceChart'),{
+    type:'line',
+    data:{labels:hist.map(d=>d.date),datasets:[{label:'₸',data:hist.map(d=>d.price),borderColor:'#2D4A2F',backgroundColor:'rgba(45,74,47,.08)',tension:.4,fill:true,pointRadius:2}]},
+    options:{responsive:true,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>'₸'+c.raw.toLocaleString()}}},scales:{y:{ticks:{callback:v=>'₸'+v.toLocaleString()}},x:{grid:{display:false},ticks:{maxTicksLimit:8}}}}
+  });
+}
+function sw(id,el){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');document.getElementById('tab-'+id).classList.add('active');
+  if(id==='price')renderChart();
+}
+function togFav(){
+  const i=favs.indexOf(prod.id),btn=document.getElementById('favBtn');
+  if(i>-1){favs.splice(i,1);btn.textContent='🤍';}else{favs.push(prod.id);btn.textContent='❤️';}
+  localStorage.setItem('ff_favs',JSON.stringify(favs));
+}
+function renderCartControls(){
+  const cart=JSON.parse(localStorage.getItem('ff_cart')||'[]');
+  const item=cart.find(i=>i.id===prod.id);
+  const container=document.getElementById('cartControls');
+  if(!container) return;
+  if(item){
+    container.innerHTML=`<div class="qty-selector"><button onclick="updateCartQty(-1)">-</button><span>${item.quantity||1}</span><button onclick="updateCartQty(1)">+</button></div>`;
+  } else {
+    container.innerHTML=`<button class="btn btn-primary w-full" id="cartBtn" onclick="addCart()"><span>🛒</span> <span data-i18n="btn_add_cart">${t('btn_add_cart')||'Add to Cart'}</span></button>`;
+  }
+}
+
+function updateCartQty(delta){
+  let cart=JSON.parse(localStorage.getItem('ff_cart')||'[]');
+  const idx=cart.findIndex(i=>i.id===prod.id);
+  if(idx>-1){
+    cart[idx].quantity=(cart[idx].quantity||1)+delta;
+    if(cart[idx].quantity<=0) cart.splice(idx,1);
+    localStorage.setItem('ff_cart',JSON.stringify(cart));
+  }
+  renderCartControls();
+}
+
+function addCart(){
+  const cart=JSON.parse(localStorage.getItem('ff_cart')||'[]');
+  if(!cart.find(i=>i.id===prod.id)) {
+    cart.push({id:prod.id,name:prod.name,emoji:prod.emoji,quantity:1, storeId: selectedStoreId});
+  }
+  localStorage.setItem('ff_cart',JSON.stringify(cart));
+  renderCartControls();
+}
+function selectStore(storeId, event){
+  event.stopPropagation();
+  selectedStoreId = storeId;
+  let cart=JSON.parse(localStorage.getItem('ff_cart')||'[]');
+  const idx=cart.findIndex(i=>i.id===prod.id);
+  if(idx>-1){
+    cart[idx].storeId = storeId;
+    localStorage.setItem('ff_cart',JSON.stringify(cart));
+  }
+  init(); // Re-render to show selected state
+}
+function submitFreshReport(){alert(t('looks_fresh_alert'));}
+function submitNearExpiryReport(){alert(t('near_expiry_alert'));}
+</script>
+<script src="js/nav.js"></script>
+</body>
+</html>

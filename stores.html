@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Stores Map — ShopNav</title>
+<link rel="stylesheet" href="css/main.css"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+// Safe localStorage polyfill for file:// compatibility
+(function() {
+  const memoryStore = {};
+  const mockStorage = {
+    getItem: (key) => memoryStore[key] || null,
+    setItem: (key, val) => { memoryStore[key] = String(val); },
+    removeItem: (key) => { delete memoryStore[key]; },
+    clear: () => { for (let k in memoryStore) delete memoryStore[k]; },
+    key: (i) => Object.keys(memoryStore)[i] || null,
+    get length() { return Object.keys(memoryStore).length; }
+  };
+
+  // Test if localStorage is working
+  let working = false;
+  try {
+    if (window.localStorage) {
+      window.localStorage.setItem('__test_polyfill__', '1');
+      window.localStorage.removeItem('__test_polyfill__');
+      working = true;
+    }
+  } catch (e) {
+    working = false;
+  }
+
+  if (!working) {
+    console.warn("localStorage is blocked or throwing errors. Injecting memory-based polyfill.");
+    
+    // Method 1: Delete and assign
+    try {
+      delete window.localStorage;
+      window.localStorage = mockStorage;
+    } catch (e) {
+      console.warn("Delete and assign window.localStorage failed, trying defineProperty:", e);
+    }
+
+    // Method 2: Define property on window
+    try {
+      Object.defineProperty(window, 'localStorage', {
+        value: mockStorage,
+        writable: true,
+        configurable: true,
+        enumerable: true
+      });
+    } catch (e) {
+      console.warn("defineProperty window.localStorage failed, trying Storage.prototype override:", e);
+    }
+
+    // Method 3: Override Storage prototype methods
+    try {
+      if (typeof Storage !== 'undefined') {
+        Storage.prototype.getItem = function(key) { return memoryStore[key] || null; };
+        Storage.prototype.setItem = function(key, val) { memoryStore[key] = String(val); };
+        Storage.prototype.removeItem = function(key) { delete memoryStore[key]; };
+        Storage.prototype.clear = function() { for (let k in memoryStore) delete memoryStore[k]; };
+        Storage.prototype.key = function(i) { return Object.keys(memoryStore)[i] || null; };
+        Object.defineProperty(Storage.prototype, 'length', {
+          get: function() { return Object.keys(memoryStore).length; }
+        });
+      }
+    } catch (e) {
+      console.error("Storage.prototype override failed:", e);
+    }
+  }
+})();
+</script>
+
+<style>
+.page-wrap{padding-top:64px;min-height:100vh;background:var(--cream)}
+.stores-layout{display:grid;grid-template-columns:1fr;grid-template-rows:1.2fr 1fr;height:calc(100vh - 64px)}
+@media(min-width:900px){
+  .stores-layout{grid-template-columns:360px 1fr;grid-template-rows:1fr;height:calc(100vh - 64px)}
+}
+.stores-sidebar{overflow-y:auto;border-right:1px solid var(--sand);background:#f5faf5}
+.stores-header{padding:1.25rem 1.25rem .75rem;border-bottom:1px solid var(--sand);position:sticky;top:0;background:var(--white);z-index:10}
+.store-card{padding:1rem 1.25rem;border-bottom:1px solid var(--light);cursor:pointer;transition:background .15s}
+.store-card:hover,.store-card.active{background:rgba(45,74,47,.05)}
+.store-card.active{border-left:3px solid var(--forest)}
+.sc-top{display:flex;align-items:center;gap:.75rem;margin-bottom:.5rem}
+.sc-av{width:42px;height:42px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0}
+.sc-name{font-weight:700;font-size:.95rem}
+.sc-addr{font-size:.76rem;color:var(--muted)}
+.sc-meta{display:flex;gap:.75rem;font-size:.78rem;color:var(--muted)}
+.sc-tags{display:flex;gap:.4rem;margin-top:.5rem;flex-wrap:wrap}
+#map{flex:1;min-height:200px}
+@media(min-width:900px){#map{min-height:400px}}
+.leaflet-popup-content-wrapper{border-radius:12px!important;padding:0!important;overflow:hidden!important;box-shadow:0 4px 18px rgba(0,0,0,0.15)!important;background:var(--white)!important;border:1px solid var(--sand)!important}
+.leaflet-popup-content{margin:0!important;font-family:'Inter',sans-serif!important}
+.custom-popup-content{padding:12px 14px}
+.popup-name{font-weight:700;font-size:.95rem;margin-bottom:.3rem}
+.popup-addr{font-size:.78rem;color:#7A7264;margin-bottom:.5rem}
+.popup-btn{display:inline-block;padding:.35rem .9rem;background:#2D4A2F;color:#fff;border-radius:100px;font-size:.78rem;font-weight:600;text-decoration:none}
+.filter-bar{padding:.75rem 1.25rem;border-bottom:1px solid var(--sand)}
+/* Distance badges */
+.dist-badge{font-size:.72rem;font-weight:600;padding:2px 8px;border-radius:100px;white-space:nowrap;flex-shrink:0}
+.dist-badge.near{background:var(--success-l);color:var(--success-d)}
+.dist-badge.mid{background:var(--blue-l);color:var(--blue)}
+.dist-badge.far{background:var(--warn-l);color:var(--warn)}
+.dist-badge.unknown{background:var(--light);color:var(--muted)}
+/* Location status pill */
+.loc-status{display:inline-flex;align-items:center;gap:.4rem;font-size:.76rem;font-weight:500;padding:.28rem .75rem;border-radius:100px;margin-top:.5rem;width:100%}
+.loc-status.detecting{background:var(--blue-l);color:var(--blue)}
+.loc-status.found{background:var(--success-l);color:var(--success-d)}
+.loc-status.denied{background:var(--warn-l);color:var(--warn)}
+/* Pulsing user dot animation */
+@keyframes locPulse{0%,100%{transform:scale(1);opacity:.8}50%{transform:scale(2.5);opacity:0}}
+</style>
+</head>
+<body>
+<nav class="navbar">
+  <a href="index.html" class="navbar-logo">
+    <span class="logo-icon">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
+        <line x1="3" y1="6" x2="21" y2="6"></line>
+        <path d="M16 10a4 4 0 0 1-8 0"></path>
+      </svg>
+    </span>
+    ShopNav<div class="logo-dot"></div>
+  </a>
+  <div class="navbar-links">
+    <a href="index.html" data-i18n="nav_home">Home</a><a href="search.html" data-i18n="nav_search">Search</a>
+    <a href="cook.html" data-i18n="nav_cook">Cook Mode</a><a href="stores.html" class="active" data-i18n="nav_stores">Stores</a><a href="cart.html" data-i18n="nav_cart">Cart</a>
+  </div>
+  <div class="navbar-actions"><a href="#">❤️</a><a href="#">👤</a></div>
+  <div class="navbar-burger" onclick="toggleMenu()">☰</div>
+</nav>
+<div class="page-wrap">
+  <div class="stores-layout">
+    <div class="stores-sidebar">
+      <div class="stores-header">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.6rem">
+          <h2 style="font-size:1.15rem;margin:0">🏪 <span data-i18n="nearby_stores">Nearby Stores</span></h2>
+          <button id="locBtn" class="btn btn-ghost btn-sm" onclick="initGeolocation(true)" style="white-space:nowrap;font-size:.8rem">📍 <span data-i18n="detect_loc">Detect Location</span></button>
+        </div>
+        <div class="search-bar" style="box-shadow:none;border-radius:var(--radius)">
+          <span>🔍</span>
+          <input type="text" id="storeSearch" data-i18n-placeholder="search_stores_ph" placeholder="Search stores or address…" oninput="filterStores(this.value)"/>
+        </div>
+        <div id="locStatus" class="loc-status detecting" style="display:none"></div>
+      </div>
+      <div class="filter-bar">
+        <div class="chip-group">
+          <div class="chip active" onclick="filterCat('all',this)" data-i18n="all">All</div>
+          <div class="chip" onclick="filterCat('grocery',this)">🛒 <span data-i18n="grocery">Grocery</span></div>
+        </div>
+      </div>
+      <div id="storeList"></div>
+    </div>
+    <div id="map"></div>
+  </div>
+</div>
+
+<script src="js/i18n.js"></script>
+<script src="js/data.js"></script>
+<script>
+/* ════════════════════════════════════════════════
+   ShopNav — Location-based Store Finder
+   ════════════════════════════════════════════════ */
+
+const params    = new URLSearchParams(location.search);
+const focusStore= params.get('store');
+
+let map = null;
+let markers = {};
+let markersGroup = null;
+let activeCard = null;
+let userLat = null, userLng = null, userMarker = null;
+let locationGranted = false;
+let mapEnabled = false;
+
+// Working copy — never mutate the original STORES array
+let storesWorking = [];
+
+// ── Safe translation wrapper ─────────────────────
+function safeT(key) {
+  if (typeof t === 'function') {
+    try {
+      return t(key);
+    } catch (e) {
+      console.error("Translation function error for key:", key, e);
+    }
+  }
+  return key;
+}
+
+// ── Safe data accessor wrappers ──────────────────
+function safeGetSelectedCity() {
+  if (typeof getSelectedCity === 'function') {
+    try {
+      return getSelectedCity();
+    } catch (e) {
+      console.error("Error in getSelectedCity:", e);
+    }
+  }
+  return 'almaty';
+}
+
+function safeGetCityInfo(cityId) {
+  if (typeof getCityInfo === 'function') {
+    try {
+      return getCityInfo(cityId);
+    } catch (e) {
+      console.error("Error in getCityInfo:", e);
+    }
+  }
+  return { id: 'almaty', name: 'Almaty', lat: 43.238, lng: 76.945, zoom: 13 };
+}
+
+function safeGetStoresForCity() {
+  if (typeof getStoresForCity === 'function') {
+    try {
+      return getStoresForCity();
+    } catch (e) {
+      console.error("Error in getStoresForCity:", e);
+    }
+  }
+  return typeof STORES !== 'undefined' ? STORES : [];
+}
+
+// ── Haversine formula ─────────────────────────────
+function haversine(lat1, lng1, lat2, lng2) {
+  if (lat1 === null || lng1 === null || lat2 === null || lng2 === null) return NaN;
+  if (isNaN(lat1) || isNaN(lng1) || isNaN(lat2) || isNaN(lng2)) return NaN;
+  const R = 6371;
+  const toRad = d => d * Math.PI / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+  const a = Math.sin(dLat/2) ** 2
+          + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2))
+          * Math.sin(dLng/2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function distClass(km) {
+  const num = parseFloat(km);
+  if (isNaN(num)) return 'unknown';
+  if (num < 1)  return 'near';
+  if (num <= 5) return 'mid';
+  return 'far';
+}
+
+// ── Recompute live distances (doesn't touch STORES) ──
+function recalcDistances() {
+  try {
+    const cityStores = safeGetStoresForCity();
+    if (!cityStores || !cityStores.length) {
+      console.warn("No stores found for selected city.");
+      storesWorking = [];
+      return;
+    }
+    
+    storesWorking = cityStores.map(s => {
+      try {
+        const liveKm = haversine(userLat, userLng, s.lat, s.lng);
+        return {
+          ...s,
+          _liveKm: isNaN(liveKm) ? s.distance : parseFloat(liveKm.toFixed(1))
+        };
+      } catch (err) {
+        console.error("Error calculating live distance for store", s.id, err);
+        return { ...s, _liveKm: s.distance };
+      }
+    });
+    storesWorking.sort((a, b) => (a._liveKm || 0) - (b._liveKm || 0));
+  } catch (err) {
+    console.error("Error in recalcDistances:", err);
+  }
+}
+
+// ── Status badge helper ───────────────────────────
+function setLocStatus(state, msg) {
+  try {
+    const el = document.getElementById('locStatus');
+    if (el) {
+      el.style.display = 'inline-flex';
+      el.className = 'loc-status ' + state;
+      el.textContent = msg;
+    }
+  } catch (err) {
+    console.error("Error in setLocStatus:", err);
+  }
+}
+
+// ── User location marker (pulsing dot) ───────────
+function placeUserMarker(lat, lng) {
+  if (!mapEnabled || !map) return;
+  try {
+    if (userMarker) {
+      userMarker.remove();
+    }
+    const dotHtml = `
+      <div style="position:relative;width:24px;height:24px">
+        <div style="position:absolute;inset:0;border-radius:50%;
+             background:rgba(59,110,168,.3);
+             animation:locPulse 1.8s ease-in-out infinite"></div>
+        <div style="position:absolute;inset:6px;border-radius:50%;
+             background:#3B6EA8;border:2px solid #fff;
+             box-shadow:0 2px 8px rgba(0,0,0,.4)"></div>
+      </div>`;
+    const userIcon = L.divIcon({
+      html: dotHtml,
+      iconSize: [24, 24],
+      iconAnchor: [12, 12],
+      className: ''
+    });
+    
+    userMarker = L.marker([lat, lng], { icon: userIcon, zIndexOffset: 1000 }).addTo(map);
+    userMarker.bindPopup('<div class="custom-popup-content"><b>📍 ' + safeT('you_are_here') + '</b></div>').openPopup();
+  } catch (err) {
+    console.error("Failed to place user marker on map:", err);
+  }
+}
+
+// ── Geolocation success ───────────────────────────
+function onLocationFound(pos) {
+  try {
+    if (!pos || !pos.coords) {
+      console.warn("Invalid position object returned. Falling back to default.");
+      onLocationDenied();
+      return;
+    }
+    userLat = pos.coords.latitude;
+    userLng = pos.coords.longitude;
+    locationGranted = true;
+
+    // Detect closest city and switch if it is not manual override
+    let detectedCity = 'almaty';
+    if (typeof detectCityFromCoords === 'function') {
+      detectedCity = detectCityFromCoords(userLat, userLng);
+    }
+    
+    const currentCity = safeGetSelectedCity();
+    const isManual = localStorage.getItem('shopnav_city_manual') === 'true';
+
+    if (!isManual && detectedCity !== currentCity) {
+      console.log(`Auto-switching city from ${currentCity} to ${detectedCity} based on user coordinates.`);
+      if (typeof setSelectedCity === 'function') {
+        setSelectedCity(detectedCity);
+      }
+      
+      // Update label in navbar
+      const cityLabel = document.getElementById('cityLabel');
+      if (cityLabel) {
+        cityLabel.textContent = safeT('city_' + detectedCity);
+      }
+
+      // Update dropdown option selection highlights
+      document.querySelectorAll('.city-option').forEach(opt => {
+        const isSelected = opt.getAttribute('onclick')?.includes(detectedCity);
+        if (isSelected) {
+          opt.style.background = 'var(--blue-l)';
+          opt.style.color = 'var(--blue)';
+          opt.style.fontWeight = '700';
+          const markerSpan = opt.querySelector('span');
+          if (markerSpan) markerSpan.textContent = '✓';
+        } else {
+          opt.style.background = '';
+          opt.style.color = 'var(--ink)';
+          opt.style.fontWeight = '500';
+          const markerSpan = opt.querySelector('span');
+          if (markerSpan) markerSpan.textContent = '○';
+        }
+      });
+    }
+
+    recalcDistances();
+    setLocStatus('found', '📍 ' + safeT('location_status_sorted'));
+
+    const btn = document.getElementById('locBtn');
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = '🔄 ' + safeT('refresh_loc');
+    }
+
+    placeUserMarker(userLat, userLng);
+
+    // Only center map on the user if the user is viewing their detected local city.
+    // If they manually chose to view a different city, we keep the map centered on the manually selected city.
+    const activeCity = safeGetSelectedCity();
+    if (detectedCity === activeCity) {
+      if (mapEnabled && map) {
+        map.setView([userLat, userLng], 14);
+      }
+    } else {
+      console.log(`User location is in ${detectedCity} but viewing ${activeCity}. Keeping map centered on ${activeCity} center.`);
+    }
+
+    renderStores();
+  } catch (err) {
+    console.error("Error in onLocationFound:", err);
+    onLocationDenied();
+  }
+}
+
+// ── Geolocation failure / denied ─────────────────
+function onLocationDenied() {
+  try {
+    userLat = null;
+    userLng = null;
+    locationGranted = false;
+
+    if (userMarker && map) {
+      try {
+        userMarker.remove();
+      } catch (e) {
+        console.error("Error removing user marker:", e);
+      }
+      userMarker = null;
+    }
+
+    const isFile = location.protocol === 'file:';
+    setLocStatus('denied',
+      isFile
+        ? '⚠️ ' + safeT('location_status_denied_file')
+        : '⚠️ ' + safeT('location_status_denied_general')
+    );
+
+    const btn = document.getElementById('locBtn');
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = '📍 ' + safeT('detect_loc');
+    }
+    
+    renderStores();
+  } catch (err) {
+    console.error("Error in onLocationDenied:", err);
+  }
+}
+
+// ── Start geolocation ─────────────────────────────
+function initGeolocation(isManualClick = false) {
+  if (isManualClick) {
+    localStorage.removeItem('shopnav_city_manual');
+  }
+  if (!navigator.geolocation) {
+    setLocStatus('denied', '❌ ' + safeT('location_status_unsupported'));
+    onLocationDenied();
+    return;
+  }
+  setLocStatus('detecting', '⏳ ' + safeT('location_status_detecting'));
+  const btn = document.getElementById('locBtn');
+  if (btn) btn.disabled = true;
+
+  try {
+    navigator.geolocation.getCurrentPosition(
+      onLocationFound,
+      onLocationDenied,
+      { timeout: 8000, maximumAge: 60000, enableHighAccuracy: true }
+    );
+  } catch (err) {
+    console.error("Error calling getCurrentPosition:", err);
+    onLocationDenied();
+  }
+}
+
+// ── Store category sets ───────────────────────────
+const groceryIds     = new Set(['magnum','small','green','artem','galmart','kmart',
+                                'magnum_turk','firkan_turk','magnum_shym','gramad_shym',
+                                'korean_market','iu_market','emart','interfood','powerlife',
+                                'korean_shym','health_shym','organic_shym','sports_shym',
+                                'asia_turk','eco_turk','fit_turk']);
+
+// ── State ─────────────────────────────────────────
+let currentCat  = 'all';
+let storeQuery  = '';
+
+// ── Main render ───────────────────────────────────
+function renderStores() {
+  try {
+    const list = document.getElementById('storeList');
+    if (!list) return;
+    list.innerHTML = '';
+
+    if (mapEnabled && map) {
+      markersGroup.clearLayers();
+    }
+    markers = {};
+
+    // Use sorted+distance copy when location known, else original
+    const source = (locationGranted && storesWorking.length > 0) ? storesWorking : [...safeGetStoresForCity()];
+
+    const toShow = source.filter(s => {
+      const isGrocery     = groceryIds.has(s.id);
+      const catOk =
+        currentCat === 'all' ||
+        (currentCat === 'grocery'     && isGrocery);
+      const qOk = !storeQuery
+        || s.name.toLowerCase().includes(storeQuery.toLowerCase())
+        || s.address.toLowerCase().includes(storeQuery.toLowerCase());
+      return catOk && qOk;
+    });
+
+    if (!toShow.length) {
+      list.innerHTML = `<div style="padding:2rem 1.25rem;text-align:center;
+        color:var(--muted);font-size:.9rem">${safeT('no_stores')}</div>`;
+      return;
+    }
+
+    toShow.forEach(s => {
+      const pat = (typeof STOCK_PATTERNS !== 'undefined') ? STOCK_PATTERNS[s.id] : null;
+      const km  = locationGranted ? s._liveKm : s.distance;
+      const distLabel = locationGranted ? `${km} ${safeT('km_away')}` : `~${km} km`;
+      const dc  = locationGranted ? distClass(km) : 'unknown';
+
+      // ── Sidebar card ──
+      const card = document.createElement('div');
+      card.className = 'store-card' + (s.id === focusStore ? ' active' : '');
+      card.id = 'sc_' + s.id;
+      card.innerHTML = `
+        <div class="sc-top">
+          <div class="sc-av" style="background:${s.color}22">${s.emoji}</div>
+          <div style="flex:1;min-width:0">
+            <div class="sc-name">${s.name}</div>
+            <div class="sc-addr">${s.address}</div>
+            ${s.city ? `<div style="font-size:.7rem;color:var(--muted);margin-top:1px">📌 ${safeT('city_' + s.city.toLowerCase())}</div>` : ''}
+          </div>
+          <span class="dist-badge ${dc}">${distLabel}</span>
+        </div>
+        <div class="sc-meta">
+          <span>🕐 ${s.hours}</span>
+          <span class="avail in-stock"><div class="avail-dot"></div>${safeT('open_status')}</span>
+        </div>
+        ${pat ? `<div style="font-size:.76rem;color:var(--rust-d);margin-top:.4rem;
+                 background:var(--accent-l);padding:4px 8px;border-radius:6px">
+                 ${pat.icon} ${pat.insight}</div>` : ''}
+        <div class="sc-tags">
+          <span class="badge badge-success">${safeT('in_stock')}</span>
+          <a href="search.html?store=${s.id}" class="badge badge-blue" style="cursor:pointer">${safeT('browse_products')}</a>
+        </div>`;
+      card.onclick = () => focusOnStore(s);
+      list.appendChild(card);
+
+      // ── Map marker + popup ──
+      if (mapEnabled && map) {
+        try {
+          const icon = L.divIcon({
+            html: `<div style="width:40px;height:40px;border-radius:50%;background:${s.color};display:flex;align-items:center;justify-content:center;font-size:18px;border:3px solid #fff;box-shadow:0 3px 12px rgba(0,0,0,.3)">${s.emoji}</div>`,
+            iconSize: [40, 40],
+            iconAnchor: [20, 20],
+            className: ''
+          });
+          
+          const marker = L.marker([s.lat, s.lng], { icon }).addTo(markersGroup);
+          
+          const popupContent = `
+            <div class="custom-popup-content" style="min-width:200px">
+              <div class="popup-name">${s.emoji} ${s.name}</div>
+              <div class="popup-addr">📍 ${s.address}${s.city ? ` · ${safeT('city_' + s.city.toLowerCase())}` : ''}</div>
+              <div style="font-size:.78rem;margin-bottom:.5rem">
+                🕐 ${s.hours}
+                ${locationGranted ? ` · <b style="color:#2D4A2F">${km} ${safeT('km_away')}</b>` : ''}
+              </div>
+              ${pat ? `<div style="font-size:.75rem;color:var(--rust-d);
+                       background:var(--accent-l);padding:3px 8px;border-radius:6px;
+                       margin-bottom:.5rem">${pat.icon} ${pat.insight}</div>` : ''}
+              <a href="search.html?store=${s.id}" class="popup-btn">${safeT('browse_products')} →</a>
+            </div>`;
+            
+          marker.bindPopup(popupContent);
+          marker.on('click', () => {
+            focusOnStore(s, false);
+          });
+          
+          markers[s.id] = marker;
+        } catch (err) {
+          console.error(`Failed to add marker for store ${s.id}:`, err);
+        }
+      }
+    });
+
+    if (focusStore && markers[focusStore]) {
+      setTimeout(() => {
+        try {
+          markers[focusStore].openPopup();
+          if (mapEnabled && map) {
+            map.setView([markers[focusStore].getLatLng().lat, markers[focusStore].getLatLng().lng], 16);
+          }
+        } catch (e) {
+          console.error("Error auto-focusing store:", e);
+        }
+      }, 300);
+    }
+  } catch (err) {
+    console.error("Error in renderStores:", err);
+  }
+}
+
+function focusOnStore(s, panToMap = true) {
+  try {
+    if (activeCard) {
+      const prevEl = document.getElementById('sc_' + activeCard);
+      if (prevEl) prevEl.classList.remove('active');
+    }
+    activeCard = s.id;
+    const cardEl = document.getElementById('sc_' + s.id);
+    if (cardEl) {
+      cardEl.classList.add('active');
+      cardEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+    
+    if (mapEnabled && map) {
+      if (panToMap) {
+        map.setView([s.lat, s.lng], 17);
+      }
+      if (markers[s.id]) {
+        markers[s.id].openPopup();
+      }
+    }
+  } catch (err) {
+    console.error("Error focusing on store:", err);
+  }
+}
+
+function filterStores(q) {
+  storeQuery = q;
+  renderStores();
+}
+
+function filterCat(cat, el) {
+  try {
+    currentCat = cat;
+    document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+    el.classList.add('active');
+    renderStores();
+  } catch (err) {
+    console.error("Error filtering category:", err);
+  }
+}
+
+// ── Bootstrapping on Page Load (Safe Multi-Event Fallback) ───────────────────
+let initRun = false;
+function initAll() {
+  if (initRun) return;
+  initRun = true;
+  console.log("Initializing ShopNav stores map and geolocation...");
+  
+  // 1. Initialize Map
+  try {
+    if (typeof L !== 'undefined') {
+      const mapContainer = document.getElementById('map');
+      if (mapContainer) {
+        const _city = safeGetCityInfo(safeGetSelectedCity());
+        map = L.map(mapContainer).setView([_city.lat, _city.lng], _city.zoom);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '© OpenStreetMap',
+          maxZoom: 19
+        }).addTo(map);
+        markersGroup = L.layerGroup().addTo(map);
+        mapEnabled = true;
+        console.log("Leaflet map successfully initialized.");
+      }
+    } else {
+      console.warn("Leaflet library is not defined. Map rendering is disabled.");
+      const mapContainer = document.getElementById('map');
+      if (mapContainer) {
+        mapContainer.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;height:100%;background:#e0ebe0;color:var(--muted);font-size:.9rem;padding:2rem;text-align:center;border-radius:12px">
+          <div>
+            <div style="font-size:2rem;margin-bottom:0.5rem">🗺️</div>
+            <strong>Map Offline</strong><br>
+            Leaflet library could not be loaded. Please check your internet connection or console.
+          </div>
+        </div>`;
+      }
+    }
+  } catch (err) {
+    console.error("Error in map initialization:", err);
+  }
+
+  // 3. Render Stores List & Map Markers
+  try {
+    renderStores();
+  } catch (err) {
+    console.error("Error in initial stores list rendering:", err);
+  }
+
+  // 5. Trigger Geolocation
+  try {
+    initGeolocation();
+  } catch (err) {
+    console.error("Error triggering geolocation:", err);
+  }
+
+  // 6. Hook language changes
+  try {
+    window.addEventListener('languageChanged', () => {
+      try {
+        renderStores();
+      } catch (err) {
+        console.error("Error rendering stores on language change:", err);
+      }
+    });
+  } catch (err) {
+    console.error("Error hooking language change event:", err);
+  }
+}
+
+// Register initialization on DOMContentLoaded and load, with a 150ms timeout safety net
+window.addEventListener('load', initAll);
+document.addEventListener('DOMContentLoaded', initAll);
+setTimeout(initAll, 150);
+</script>
+<script src="js/nav.js"></script>
+</body>
+</html>

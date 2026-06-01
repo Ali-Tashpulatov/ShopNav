@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Cook Mode — ShopNav</title>
+<link rel="stylesheet" href="css/main.css"/>
+<style>
+.page-wrap{padding-top:64px;background:var(--cream);min-height:100vh}
+.cook-hero{background:linear-gradient(135deg,var(--forest) 0%,#1a3d1c 100%);padding:5rem 1.5rem 4rem;text-align:center;position:relative;overflow:hidden}
+.cook-hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 60% 50% at 50% 100%,rgba(242,160,59,.2),transparent)}
+.cook-hero h1{color:var(--cream);margin-bottom:.75rem;position:relative;z-index:1}
+.cook-hero h1 em{color:var(--accent);font-style:italic}
+.cook-hero p{color:rgba(253,248,240,.65);max-width:520px;margin:0 auto 2.5rem;position:relative;z-index:1}
+.dish-input-wrap{max-width:680px;margin:0 auto;position:relative;z-index:1}
+.dish-input{width:100%;padding:1.4rem 1.8rem;font-size:1.2rem;border:none;border-radius:var(--radius-pill);outline:none;background:var(--white);box-shadow:0 24px 60px rgba(0,0,0,.3);color:var(--ink);transition:all .3s}
+.dish-input:focus{box-shadow:0 24px 80px rgba(0,0,0,.4);transform:translateY(-2px)}
+.dish-input::placeholder{color:var(--muted)}
+.dish-suggestions{position:absolute;top:calc(100% + 12px);left:0;right:0;background:var(--white);border-radius:16px;box-shadow:var(--shadow-xl);overflow:hidden;display:none;z-index:10}
+.dish-sug-item{padding:.75rem 1.25rem;cursor:pointer;display:flex;align-items:center;gap.75rem;font-size:.92rem;transition:background .15s}
+.dish-sug-item:hover{background:var(--warm)}
+.recipe-chips{display:flex;gap:.75rem;flex-wrap:wrap;justify-content:center;margin-top:2rem;position:relative;z-index:1}
+.recipe-chip{background:rgba(253,248,240,.12);border:1px solid rgba(253,248,240,.2);color:var(--cream);padding:.55rem 1.25rem;border-radius:100px;font-size:.9rem;cursor:pointer;transition:all .2s}
+.recipe-chip:hover{background:rgba(253,248,240,.22);transform:translateY(-1px)}
+.category-filter-chip{background:rgba(253,248,240,.06);border:1px solid rgba(253,248,240,.1);color:rgba(253,248,240,.7);padding:.35rem .9rem;border-radius:100px;font-size:.82rem;cursor:pointer;transition:all .2s;font-weight:500}
+.category-filter-chip:hover{background:rgba(253,248,240,.15);color:var(--cream)}
+.category-filter-chip.active{background:var(--accent);border-color:var(--accent);color:var(--forest);font-weight:600;box-shadow:0 4px 12px rgba(242,160,59,0.3)}
+.show-more-btn {background:rgba(253,248,240,0.08);border:1px dashed rgba(253,248,240,0.3);color:var(--cream);padding:.45rem 1.5rem;border-radius:100px;font-size:.82rem;cursor:pointer;transition:all .2s;font-weight:500;margin-top:1.25rem;outline:none}
+.show-more-btn:hover {background:rgba(253,248,240,0.18);border-color:rgba(253,248,240,0.5);color:var(--accent)}
+.results-section{max-width:1000px;margin:0 auto;padding:3rem 1.5rem}
+.ingredient-row{display:flex;align-items:center;gap:1rem;padding:1rem;background:var(--white);border:1px solid var(--sand);border-radius:12px;margin-bottom:.6rem;position:relative;transition:all .2s ease}
+.ingredient-row:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(5,150,105,0.08);border-color:rgba(5,150,105,0.2)}
+.ing-emoji{font-size:1.8rem;flex-shrink:0}
+.ing-info{flex:1}.ing-name{font-weight:600;font-size:.92rem}.ing-brand{font-size:.78rem;color:var(--muted)}
+.ing-stores{display:flex;gap:.4rem;flex-wrap:wrap;margin-top:.3rem}
+.ing-store-tag{font-size:.73rem;padding:2px 7px;border-radius:100px;font-weight:500}
+.ing-best-price{font-weight:700;font-size:1.05rem;color:var(--forest);white-space:nowrap}
+.ing-unit{font-size:.72rem;color:var(--muted);font-family:'DM Mono',monospace}
+.basket-card{background:var(--white);border:2px solid var(--forest);border-radius:16px;padding:1.5rem;margin-top:2rem}
+.basket-title{font-family:'Playfair Display',serif;font-size:1.4rem;font-weight:700;margin-bottom:1.25rem;color:var(--forest)}
+.basket-store-row{display:flex;align-items:center;justify-content:space-between;padding:.75rem 1rem;border-radius:10px;margin-bottom:.5rem;border:1px solid var(--sand);background:var(--warm)}
+.basket-store-row.cheapest{background:rgba(45,74,47,.08);border-color:var(--forest)}
+.basket-total{font-size:1.1rem;font-weight:700}
+.empty-state{text-align:center;padding:5rem 2rem;color:var(--muted)}
+.empty-state .ei{font-size:4rem;margin-bottom:1rem}
+.share-btn-row{display:flex;gap:.75rem;margin-top:1.5rem;flex-wrap:wrap}
+</style>
+</head>
+<body>
+<nav class="navbar">
+  <a href="index.html" class="navbar-logo">
+    <span class="logo-icon">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
+        <line x1="3" y1="6" x2="21" y2="6"></line>
+        <path d="M16 10a4 4 0 0 1-8 0"></path>
+      </svg>
+    </span>
+    ShopNav<div class="logo-dot"></div>
+  </a>
+  <div class="navbar-links">
+    <a href="index.html" data-i18n="nav_home">Home</a><a href="search.html" data-i18n="nav_search">Search</a>
+    <a href="cook.html" class="active" data-i18n="nav_cook">Cook Mode</a><a href="stores.html" data-i18n="nav_stores">Stores</a><a href="cart.html" data-i18n="nav_cart">Cart</a>
+  </div>
+  <div class="navbar-actions"><a href="#">❤️</a><a href="#">👤</a></div>
+  <div class="navbar-burger" onclick="toggleMenu()">☰</div>
+</nav>
+<div class="page-wrap">
+  <div class="cook-hero">
+    <div class="hero-dots"></div>
+    <div class="hero-badge" style="margin-bottom:1.5rem" data-i18n="cook_hero_badge">🍲 Cook Mode</div>
+    <h1 data-i18n="cook_hero_title">What do you want<br>to <em>cook</em> today?</h1>
+    <p data-i18n="cook_hero_desc">Enter any dish and instantly see all ingredients, which stores carry them, and the cheapest basket combination.</p>
+    <div class="dish-input-wrap">
+      <input class="dish-input" id="dishInput" data-i18n-placeholder="cook_input_ph" placeholder="e.g. Borscht, Plov, Fried eggs…" autocomplete="off" oninput="onDishInput(this.value)" onkeydown="if(event.key==='Enter')cookDish(this.value)"/>
+      <div class="dish-suggestions" id="dishSugg"></div>
+    </div>
+    <div class="category-filters" id="categoryFilters" style="display:flex;gap:.6rem;flex-wrap:wrap;justify-content:center;margin-top:2.5rem;margin-bottom:0rem;position:relative;z-index:1">
+      <!-- Generated dynamically -->
+    </div>
+    <div class="recipe-chips">
+      <!-- Generated dynamically -->
+    </div>
+    <div id="showMoreContainer" style="position:relative;z-index:1;display:none;justify-content:center;">
+      <button class="show-more-btn" id="showMoreBtn" onclick="toggleShowMore()"></button>
+    </div>
+  </div>
+  <div class="results-section" id="resultsSection">
+    <div class="empty-state" id="emptyState">
+      <div class="ei">🍳</div>
+      <h3 style="margin-bottom:.5rem" data-i18n="cook_empty_title">Pick a dish to get started</h3>
+      <p data-i18n="cook_empty_desc">We'll show all ingredients with the best prices across all nearby stores.</p>
+    </div>
+    <div id="cookResults" style="display:none">
+      <div class="flex-between" style="margin-bottom:1.5rem;flex-wrap:wrap;gap:.75rem">
+        <div>
+          <div class="section-tag" data-i18n="sec_ingredients">Ingredients</div>
+          <h2 id="dishTitle" style="font-size:1.6rem"></h2>
+          <div style="font-size:.85rem;color:var(--muted);margin-top:.25rem" id="dishServings"></div>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="addAllToCart()" data-i18n="btn_add_all_cart">🛒 Add all to cart</button>
+      </div>
+      <div id="ingredientList"></div>
+      <div class="basket-card" id="basketCard">
+        <div class="basket-title">🧮 <span data-i18n="cooking_cheapest_basket">Cheapest Basket</span></div>
+        <p style="font-size:.88rem;color:var(--muted);margin-bottom:1.25rem" data-i18n="cooking_basket_intro">Buy everything from one store vs split shopping:</p>
+        <div id="basketRows"></div>
+        <div class="share-btn-row">
+          <button class="btn btn-primary btn-sm" onclick="shareList()">📤 <span data-i18n="cooking_share_list">Share list</span></button>
+          <button class="btn btn-ghost btn-sm" onclick="addAllToCart()" data-i18n="btn_add_all_cart">🛒 Add all to cart</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="js/i18n.js"></script>
+<script src="js/data.js"></script>
+<script>
+let selectedCookCategory = 'all';
+const COOK_CATEGORIES = [
+  { id: 'all', key: 'rcat_all' },
+  { id: 'Breakfast', key: 'rcat_breakfast' },
+  { id: 'Lunch', key: 'rcat_lunch' },
+  { id: 'Dinner', key: 'rcat_dinner' },
+  { id: 'Kazakh Cuisine', key: 'rcat_kazakh_cuisine' },
+  { id: 'Fast Food', key: 'rcat_fast_food' },
+  { id: 'Desserts', key: 'rcat_desserts' }
+];
+
+function onDishInput(val){
+  const box=document.getElementById('dishSugg');
+  if(val.length<2){box.style.display='none';return;}
+  const res=RECIPES.filter(r=>r.name.toLowerCase().includes(val.toLowerCase()));
+  if(!res.length){box.style.display='none';return;}
+  box.innerHTML=res.map(r=>`<div class="dish-sug-item" onmousedown="quickCook('${r.id}')">
+    <span style="margin-right:.6rem">${r.emoji}</span><strong>${r.name}</strong>
+    <span style="font-size:.78rem;color:var(--muted);margin-left:.5rem">${t('num_ingredients').replace('{count}', r.ingredients.length)}</span>
+  </div>`).join('');
+  box.style.display='block';
+}
+function cookDish(val){
+  const r=RECIPES.find(r=>r.name.toLowerCase().includes(val.toLowerCase()));
+  if(r)quickCook(r.id);
+  else alert(t('recipe_not_found'));
+}
+document.addEventListener('click',e=>{if(!e.target.closest('#dishInput'))document.getElementById('dishSugg').style.display='none';});
+
+function quickCook(id){
+  window.currentRecipeId = id;
+  const recipe=RECIPES.find(r=>r.id===id);
+  if(!recipe)return;
+  document.getElementById('dishInput').value=recipe.name;
+  document.getElementById('dishSugg').style.display='none';
+  document.getElementById('emptyState').style.display='none';
+  document.getElementById('cookResults').style.display='block';
+  document.getElementById('dishTitle').textContent=recipe.emoji+' '+recipe.name;
+  document.getElementById('dishServings').textContent=t('servings_prefix').replace('{servings}', recipe.servings);
+  renderIngredients(recipe);
+  renderBasket(recipe);
+}
+
+function renderIngredients(recipe){
+  const il=document.getElementById('ingredientList');
+  il.innerHTML='';
+  recipe.ingredients.forEach(pid=>{
+    const p=getProductById(pid);
+    if(!p)return;
+    const stores=getStoresForProduct(p);
+    const best=getCheapestStore(p);
+    const bestPrice=best?p.price[best]:0;
+    const unit=best?getUnitPrice(p,best):null;
+    
+    // Read quantities and format details nicely
+    const qty = (recipe.quantities && recipe.quantities[pid]) ? recipe.quantities[pid] : '';
+    const details = [p.brand, p.weight, qty].filter(Boolean).join(' · ');
+    
+    il.innerHTML+=`<div class="ingredient-row reveal">
+      <span class="ing-emoji" style="display:flex;align-items:center;justify-content:center;width:2.5rem;height:2.5rem">${p.image ? `<img src="${p.image}" style="max-height:100%;max-width:100%;mix-blend-mode:multiply">` : p.emoji}</span>
+      <div class="ing-info">
+        <div class="ing-name">${p.name}</div>
+        <div class="ing-brand">${details}</div>
+        <div class="ing-stores">${stores.slice(0,3).map(s=>`<span class="ing-store-tag" style="background:${s.color}22;color:${s.color}">${s.emoji} ${s.name}</span>`).join('')}
+        ${stores.length>3?`<span style="font-size:.73rem;color:var(--muted)">+${stores.length-3} ${t('more_label')}</span>`:''}</div>
+      </div>
+      <div style="text-align:right">
+        <div class="ing-best-price">${bestPrice?'₸'+bestPrice.toLocaleString():t('not_available')}</div>
+        ${unit?`<div class="ing-unit">${unit.value}₸/${t('per_'+unit.label.replace('per ',''))}</div>`:''}
+        <a href="product.html?id=${p.id}" style="font-size:.75rem;color:var(--forest);text-decoration:underline">${t('details_label')} →</a>
+      </div>
+    </div>`;
+  });
+  const obs=new IntersectionObserver(entries=>entries.forEach(e=>{if(e.isIntersecting)e.target.classList.add('visible');}),{threshold:.1});
+  document.querySelectorAll('.reveal').forEach(el=>obs.observe(el));
+}
+
+function renderBasket(recipe){
+  const br=document.getElementById('basketRows');
+  br.innerHTML='';
+  // Calculate total per store (only stores that have ALL ingredients)
+  const storeTotals={};
+  STORES.forEach(s=>{
+    let total=0,hasAll=true;
+    recipe.ingredients.forEach(pid=>{
+      const p=getProductById(pid);
+      if(!p)return;
+      if(!p.price[s.id]||p.stock[s.id]==='out'){hasAll=false;}
+      else total+=p.price[s.id];
+    });
+    if(hasAll)storeTotals[s.id]={total,store:s};
+  });
+  // Cheapest single store
+  const sorted=Object.values(storeTotals).sort((a,b)=>a.total-b.total);
+  if(sorted.length){
+    sorted.forEach((entry,i)=>{
+      br.innerHTML+=`<div class="basket-store-row ${i===0?'cheapest':''}">
+        <div style="display:flex;align-items:center;gap:.75rem">
+          <span style="font-size:1.3rem">${entry.store.emoji}</span>
+          <div><div style="font-weight:600">${entry.store.name}${i===0?` <span class="badge badge-forest">${t('cheapest_badge')}</span>`:''}</div>
+          <div style="font-size:.78rem;color:var(--muted)">${entry.store.distance}km ${t('away')} · ${t('all_items_available')}</div></div>
+        </div>
+        <div class="basket-total">₸${entry.total.toLocaleString()}</div>
+      </div>`;
+    });
+  }
+  // Optimal split (cheapest per ingredient)
+  let splitTotal=0;
+  const splitPlan={};
+  recipe.ingredients.forEach(pid=>{
+    const p=getProductById(pid);
+    if(!p)return;
+    const best=getCheapestStore(p);
+    if(best){
+      splitTotal+=p.price[best];
+      const sName=getStoreById(best)?.name||best;
+      if(!splitPlan[best])splitPlan[best]={store:getStoreById(best),items:[],total:0};
+      splitPlan[best].items.push(p.name);
+      splitPlan[best].total+=p.price[best];
+    }
+  });
+  if(Object.keys(splitPlan).length>1){
+    br.innerHTML+=`<div style="margin-top:1rem;padding-top:1rem;border-top:1px solid var(--sand)">
+      <div style="font-weight:600;margin-bottom:.5rem;color:var(--muted);font-size:.85rem">✨ ${t('optimal_split_title')}</div>`;
+    Object.values(splitPlan).forEach(sp=>{
+      br.innerHTML+=`<div class="basket-store-row">
+        <div style="display:flex;align-items:center;gap:.75rem">
+          <span style="font-size:1.3rem">${sp.store?.emoji}</span>
+          <div><div style="font-weight:600">${sp.store?.name}</div>
+          <div style="font-size:.76rem;color:var(--muted)">${sp.items.join(', ')}</div></div>
+        </div>
+        <div class="basket-total">₸${sp.total.toLocaleString()}</div>
+      </div>`;
+    });
+    br.innerHTML+=`<div style="text-align:right;font-size:.9rem;margin-top:.5rem;font-weight:700;color:var(--forest)">${t('split_total_label')}: ₸${splitTotal.toLocaleString()}</div></div>`;
+  }
+}
+function addAllToCart(){
+  alert(t('ingredients_added_to_cart'));
+}
+function shareList(){
+  if(navigator.share){navigator.share({title:'ShopNav Shopping List',text:'Check out my ingredient list on ShopNav!',url:window.location.href});}
+  else{navigator.clipboard.writeText(window.location.href).then(()=>alert(t('link_copied_clipboard'))); }
+}
+
+function renderCategoryFilters() {
+  const container = document.getElementById('categoryFilters');
+  if (!container) return;
+  container.innerHTML = COOK_CATEGORIES.map(cat => {
+    const activeClass = selectedCookCategory === cat.id ? 'active' : '';
+    return `<div class="category-filter-chip ${activeClass}" onclick="setCookCategory('${cat.id}')">${t(cat.key)}</div>`;
+  }).join('');
+}
+
+let showAllDishes = false;
+
+function setCookCategory(catId) {
+  selectedCookCategory = catId;
+  showAllDishes = false;
+  renderCategoryFilters();
+  renderRecipeChips();
+}
+
+function toggleShowMore() {
+  showAllDishes = !showAllDishes;
+  renderRecipeChips();
+}
+
+function renderRecipeChips() {
+  const container = document.querySelector('.recipe-chips');
+  if (!container) return;
+  const filtered = selectedCookCategory === 'all' 
+    ? RECIPES 
+    : RECIPES.filter(r => r.category === selectedCookCategory);
+    
+  const showMoreContainer = document.getElementById('showMoreContainer');
+  const showMoreBtn = document.getElementById('showMoreBtn');
+  
+  let dishesToRender = filtered;
+  if (selectedCookCategory === 'all' && filtered.length > 6) {
+    if (!showAllDishes) {
+      dishesToRender = filtered.slice(0, 6);
+      if (showMoreContainer && showMoreBtn) {
+        showMoreContainer.style.display = 'flex';
+        showMoreBtn.textContent = 'View All';
+      }
+    } else {
+      if (showMoreContainer && showMoreBtn) {
+        showMoreContainer.style.display = 'flex';
+        showMoreBtn.textContent = 'View Less';
+      }
+    }
+  } else {
+    if (showMoreContainer) {
+      showMoreContainer.style.display = 'none';
+    }
+  }
+  
+  container.innerHTML = dishesToRender.map(r => `
+    <div class="recipe-chip" onclick="quickCook('${r.id}')">${r.emoji} ${r.name}</div>
+  `).join('');
+}
+
+window.addEventListener('languageChanged', () => {
+  renderCategoryFilters();
+  renderRecipeChips();
+  if (window.currentRecipeId) {
+    quickCook(window.currentRecipeId);
+  }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+  renderCategoryFilters();
+  renderRecipeChips();
+});
+</script>
+<script src="js/nav.js"></script>
+</body>
+</html>

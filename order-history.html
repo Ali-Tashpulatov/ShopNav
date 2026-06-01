@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Order History — ShopNav</title>
+<meta name="description" content="View your past ShopNav orders and buy again with one click."/>
+<link rel="stylesheet" href="css/main.css"/>
+<style>
+.page-wrap { padding-top: 64px; background: var(--cream); min-height: 100vh; }
+.history-hero {
+  background: linear-gradient(135deg, var(--forest) 0%, #1a3d1c 100%);
+  padding: 3rem 1.5rem;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+.history-hero::before {
+  content: ''; position: absolute; inset: 0;
+  background: radial-gradient(ellipse 60% 50% at 50% 100%, rgba(107,74,155,.2), transparent);
+}
+.history-hero h1 { color: var(--cream); position: relative; z-index: 1; margin-bottom: .5rem; }
+.history-hero p  { color: rgba(253,248,240,.65); max-width: 480px; margin: 0 auto; position: relative; z-index: 1; }
+
+.history-content {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 2.5rem 1.5rem 4rem;
+}
+
+/* ── Order Card ───────────────────────── */
+.order-card {
+  background: var(--white);
+  border: 1px solid var(--sand);
+  border-radius: 20px;
+  overflow: hidden;
+  margin-bottom: 1.25rem;
+  box-shadow: 0 4px 16px rgba(0,0,0,.04);
+  transition: transform .2s, box-shadow .2s;
+}
+.order-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0,0,0,.08);
+}
+.order-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid var(--light);
+  background: var(--warm);
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+.order-id {
+  font-family: 'DM Mono', monospace;
+  font-size: .75rem;
+  color: var(--muted);
+  margin-top: .15rem;
+}
+.order-status {
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+  background: var(--success-l);
+  color: var(--success-d);
+  padding: .3rem .85rem;
+  border-radius: 100px;
+  font-size: .78rem;
+  font-weight: 600;
+}
+.order-date-name { font-weight: 700; font-size: 1rem; color: var(--ink); }
+
+.order-card-body {
+  padding: 1.25rem 1.5rem;
+}
+
+.order-items-preview {
+  display: flex;
+  gap: .5rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.25rem;
+  align-items: center;
+}
+.order-item-thumb {
+  width: 48px; height: 48px;
+  border-radius: 10px;
+  background: var(--warm);
+  border: 1px solid var(--sand);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  font-size: 1.2rem;
+}
+.order-item-thumb img {
+  max-width: 100%; max-height: 100%;
+  object-fit: contain;
+  mix-blend-mode: multiply;
+}
+.order-more-badge {
+  width: 48px; height: 48px;
+  border-radius: 10px;
+  background: var(--sand);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: .75rem;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.order-meta {
+  display: flex;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  align-items: center;
+  border-top: 1px dashed var(--sand);
+  padding-top: 1rem;
+}
+.order-meta-item { display: flex; flex-direction: column; gap: .15rem; }
+.order-meta-label { font-size: .72rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-weight: 600; }
+.order-meta-value { font-size: .9rem; font-weight: 700; color: var(--ink); }
+.order-total-value { font-size: 1.1rem; color: var(--forest); }
+
+.order-actions {
+  display: flex;
+  gap: .75rem;
+  margin-top: 1.25rem;
+}
+
+/* ── Empty State ──────────────────────── */
+.empty-history {
+  text-align: center;
+  padding: 5rem 2rem;
+  color: var(--muted);
+}
+.empty-history-icon { font-size: 4rem; margin-bottom: 1rem; opacity: .6; }
+.empty-history h3 { font-size: 1.4rem; margin-bottom: .5rem; color: var(--ink); }
+.empty-history p { max-width: 360px; margin: 0 auto 2rem; }
+
+/* ── Loading Skeleton ─────────────────── */
+.skeleton-card {
+  background: var(--white);
+  border: 1px solid var(--sand);
+  border-radius: 20px;
+  padding: 1.5rem;
+  margin-bottom: 1.25rem;
+}
+.skeleton-line {
+  height: 16px;
+  border-radius: 8px;
+  margin-bottom: .75rem;
+}
+
+/* Payment method badge */
+.pay-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: .35rem;
+  padding: .25rem .75rem;
+  border-radius: 100px;
+  font-size: .78rem;
+  font-weight: 600;
+}
+.pay-badge.cash  { background: rgba(52,211,153,.12); color: #14865a; }
+.pay-badge.card  { background: rgba(59,110,168,.12); color: var(--blue); }
+.pay-badge.kaspi { background: rgba(204,0,0,.08);    color: #cc0000; }
+</style>
+</head>
+<body>
+<nav class="navbar">
+  <a href="index.html" class="navbar-logo">
+    <span class="logo-icon">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
+        <line x1="3" y1="6" x2="21" y2="6"></line>
+        <path d="M16 10a4 4 0 0 1-8 0"></path>
+      </svg>
+    </span>
+    ShopNav<div class="logo-dot"></div>
+  </a>
+  <div class="navbar-links">
+    <a href="index.html">Home</a>
+    <a href="search.html">Search</a>
+    <a href="cook.html">Cook Mode</a>
+    <a href="stores.html">Stores</a>
+    <a href="cart.html">Cart</a>
+  </div>
+  <div class="navbar-actions"><a href="#">❤️</a><a href="#">👤</a></div>
+  <div class="navbar-burger" onclick="toggleMenu()">☰</div>
+</nav>
+
+<div class="page-wrap">
+  <div class="history-hero">
+    <div class="hero-dots"></div>
+    <div class="hero-badge" style="margin-bottom:1.5rem">🛍️ Order History</div>
+    <h1>Your Past Orders</h1>
+    <p>Review previous purchases and reorder your favourites with one click.</p>
+  </div>
+
+  <div class="history-content">
+    <div id="ordersContainer">
+      <!-- Skeleton loading state -->
+      <div class="skeleton-card" id="loadingSkeleton">
+        <div class="skeleton skeleton-line" style="width:40%;margin-bottom:1rem"></div>
+        <div class="skeleton skeleton-line" style="width:80%"></div>
+        <div class="skeleton skeleton-line" style="width:60%"></div>
+        <div class="skeleton skeleton-line" style="width:30%;margin-top:1rem"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="js/i18n.js"></script>
+<script src="js/data.js"></script>
+<script src="js/cart-api.js"></script>
+<script>
+const PAY_ICONS = { cash: '💵', card: '💳', kaspi: '🇰🇿' };
+const PAY_LABELS = { cash: 'Cash on Delivery', card: 'Card', kaspi: 'Kaspi Pay' };
+
+async function loadOrders() {
+  const container = document.getElementById('ordersContainer');
+
+  try {
+    const orders = await apiListOrders();
+    document.getElementById('loadingSkeleton')?.remove();
+
+    if (!orders.length) {
+      container.innerHTML = `
+        <div class="empty-history">
+          <div class="empty-history-icon">🛍️</div>
+          <h3>No orders yet</h3>
+          <p>Your order history will appear here after you place your first order.</p>
+          <a href="search.html" class="btn btn-primary">Start Shopping →</a>
+        </div>`;
+      return;
+    }
+
+    container.innerHTML = orders.map(order => {
+      const date = new Date(order.created_at).toLocaleDateString('en', {
+        day: 'numeric', month: 'long', year: 'numeric'
+      });
+      const time = new Date(order.created_at).toLocaleTimeString('en', {
+        hour: '2-digit', minute: '2-digit'
+      });
+
+      // Item thumbnails
+      const thumbs = order.items.slice(0, 5).map(item => {
+        const prod = getProductById(item.id);
+        const imgHTML = prod && prod.image
+          ? `<img src="${prod.image}" alt="${item.name}">`
+          : `<span style="font-size:1.4rem">${item.emoji || '📦'}</span>`;
+        return `<div class="order-item-thumb" title="${item.name} ×${item.quantity || 1}">${imgHTML}</div>`;
+      }).join('');
+      const moreCount = order.items.length - 5;
+      const moreHTML = moreCount > 0
+        ? `<div class="order-more-badge">+${moreCount}</div>`
+        : '';
+
+      const pm = order.payment_method || 'cash';
+      const payIcon  = PAY_ICONS[pm]  || '💵';
+      const payLabel = PAY_LABELS[pm] || pm;
+
+      // Delivery address snippet (for cash orders)
+      let deliverySnippet = '';
+      try {
+        const pd = typeof order.paymentDetails === 'string'
+          ? JSON.parse(order.paymentDetails) : order.paymentDetails;
+        if (pd && pd.address) deliverySnippet = pd.address;
+        if (pd && pd.phone && !deliverySnippet) deliverySnippet = pd.phone;
+      } catch(e) {}
+
+      return `
+        <div class="order-card" id="order-${order.id}">
+          <div class="order-card-header">
+            <div>
+              <div class="order-date-name">🛍️ ${date} · ${time}</div>
+              <div class="order-id">#${order.id.slice(0,8).toUpperCase()}</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:.6rem;flex-shrink:0">
+              <span class="order-status">✅ Confirmed</span>
+            </div>
+          </div>
+          <div class="order-card-body">
+            <div class="order-items-preview">
+              ${thumbs}${moreHTML}
+              <span style="font-size:.8rem;color:var(--muted);margin-left:.25rem">
+                ${order.items.length} item${order.items.length !== 1 ? 's' : ''}
+              </span>
+            </div>
+            <div class="order-meta">
+              <div class="order-meta-item">
+                <span class="order-meta-label">Total</span>
+                <span class="order-meta-value order-total-value">₸${Number(order.total || 0).toLocaleString()}</span>
+              </div>
+              <div class="order-meta-item">
+                <span class="order-meta-label">Payment</span>
+                <span class="order-meta-value">
+                  <span class="pay-badge ${pm}">${payIcon} ${payLabel}</span>
+                </span>
+              </div>
+              ${order.placed_by ? `
+              <div class="order-meta-item">
+                <span class="order-meta-label">Placed by</span>
+                <span class="order-meta-value">${order.placed_by}</span>
+              </div>` : ''}
+              ${deliverySnippet ? `
+              <div class="order-meta-item" style="flex:1;min-width:180px">
+                <span class="order-meta-label">Delivery</span>
+                <span class="order-meta-value" style="font-weight:500;font-size:.85rem">${deliverySnippet}</span>
+              </div>` : ''}
+            </div>
+            <div class="order-actions">
+              <button
+                class="btn btn-primary btn-sm"
+                onclick="buyAgain('${order.id}')"
+                style="flex:1"
+              >
+                🔄 Buy Again
+              </button>
+              <a href="cart.html" class="btn btn-ghost btn-sm">🛒 Go to Cart</a>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+  } catch (err) {
+    document.getElementById('loadingSkeleton')?.remove();
+    container.innerHTML = `
+      <div class="empty-history">
+        <div class="empty-history-icon">⚠️</div>
+        <h3>Could not load orders</h3>
+        <p>${err.message}</p>
+        <button class="btn btn-primary" onclick="loadOrders()">Try Again</button>
+      </div>`;
+  }
+}
+
+async function buyAgain(orderId) {
+  const btn = document.querySelector(`#order-${orderId} button`);
+  if (btn) {
+    btn.textContent = '⏳ Adding to cart…';
+    btn.disabled = true;
+  }
+
+  try {
+    const order = await apiGetOrder(orderId);
+    if (!order || !order.items.length) throw new Error('Order has no items');
+
+    // Create a fresh cart and load the previous items
+    const newCart = await apiCreateCart();
+    await apiUpdateCartItems(newCart.id, order.items);
+
+    // Also update localStorage so cart.html picks it up immediately
+    localStorage.setItem('ff_cart', JSON.stringify(order.items));
+    localStorage.setItem('ff_shared_cart_id', newCart.id);
+
+    window.location.href = `cart.html?cartId=${newCart.id}`;
+  } catch (err) {
+    alert('Failed to reorder: ' + err.message);
+    if (btn) {
+      btn.textContent = '🔄 Buy Again';
+      btn.disabled = false;
+    }
+  }
+}
+
+document.addEventListener('DOMContentLoaded', loadOrders);
+</script>
+<script src="js/nav.js"></script>
+</body>
+</html>

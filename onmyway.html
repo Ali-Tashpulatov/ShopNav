@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>On My Way — ShopNav</title>
+<link rel="stylesheet" href="css/main.css"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+.page-wrap{padding-top:64px;background:var(--cream);min-height:100vh}
+.hero{background:linear-gradient(135deg,#1a3d6b 0%,#2d4a8b 100%);padding:3.5rem 1.5rem;text-align:center;position:relative;overflow:hidden}
+.hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 60% 50% at 50% 100%,rgba(59,110,168,.3),transparent)}
+.hero h1{color:var(--cream);position:relative;z-index:1;margin-bottom:.6rem}
+.hero h1 em{color:#7ec8e3;font-style:italic}
+.hero p{color:rgba(253,248,240,.65);max-width:500px;margin:0 auto 2rem;position:relative;z-index:1}
+.route-form{background:rgba(253,248,240,.1);border:1px solid rgba(253,248,240,.2);border-radius:18px;padding:1.5rem;max-width:560px;margin:0 auto;position:relative;z-index:1}
+.route-input-row{display:flex;align-items:center;gap:.75rem;margin-bottom:.75rem}
+.route-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0}
+.route-input{flex:1;padding:.65rem 1rem;border-radius:var(--radius-pill);border:none;outline:none;font-size:.92rem;background:rgba(255,255,255,.95)}
+.route-line{width:2px;height:20px;background:rgba(255,255,255,.3);margin-left:5px}
+.main-content{max-width:1100px;margin:0 auto;padding:2.5rem 1.5rem;display:grid;grid-template-columns:1fr;gap:2rem;align-items:start}
+@media(min-width:900px){.main-content{grid-template-columns:1fr 380px}}
+#routeMap{border-radius:16px;border:1px solid var(--sand);height:400px;overflow:hidden}
+.route-store-card{background:var(--white);border:1px solid var(--sand);border-radius:14px;padding:1.1rem;margin-bottom:.75rem;display:flex;align-items:flex-start;gap:.9rem;cursor:pointer;transition:all .2s}
+.route-store-card:hover{transform:translateY(-2px);border-color:#34d399;box-shadow:0 8px 24px rgba(5,150,105,0.12)}
+.route-store-card.best{border-color:#34d399;background:rgba(52,211,153,0.08);box-shadow:0 4px 16px rgba(5,150,105,0.08)}
+.rsc-num{width:26px;height:26px;border-radius:50%;background:var(--blue);color:#fff;display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:700;flex-shrink:0;margin-top:2px}
+.rsc-name{font-weight:700;font-size:.92rem}
+.rsc-sub{font-size:.78rem;color:var(--muted);margin-top:2px}
+.rsc-detour{font-size:.75rem;font-weight:600;color:var(--blue);margin-top:.3rem}
+.empty-route{text-align:center;padding:3rem 1rem;color:var(--muted)}
+</style>
+</head>
+<body>
+<nav class="navbar">
+  <a href="index.html" class="navbar-logo">
+    <span class="logo-icon">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
+        <line x1="3" y1="6" x2="21" y2="6"></line>
+        <path d="M16 10a4 4 0 0 1-8 0"></path>
+      </svg>
+    </span>
+    ShopNav<div class="logo-dot"></div>
+  </a>
+  <div class="navbar-links">
+    <a href="index.html" data-i18n="nav_home">Home</a><a href="search.html" data-i18n="nav_search">Search</a>
+    <a href="cook.html" data-i18n="nav_cook">Cook Mode</a><a href="stores.html" class="active" data-i18n="nav_stores">Stores</a><a href="cart.html" data-i18n="nav_cart">Cart</a>
+  </div>
+  <div class="navbar-actions"><a href="#">❤️</a><a href="#">👤</a></div>
+  <div class="navbar-burger" onclick="toggleMenu()">☰</div>
+</nav>
+<div class="page-wrap">
+  <div class="hero">
+    <div class="hero-dots"></div>
+    <div class="hero-badge" style="margin-bottom:1.5rem;background:rgba(59,110,168,.2);border-color:rgba(59,110,168,.4);color:#7ec8e3" data-i18n="on_my_way_hero_badge">🗺️ On My Way</div>
+    <h1 data-i18n="on_my_way_hero_title">Stores <em>Along</em><br>Your Route</h1>
+    <p data-i18n="on_my_way_hero_desc">Enter your start and end points. We'll find stores that carry your product along your existing journey — minimal detour.</p>
+    <div class="route-form">
+      <div class="route-input-row">
+        <div class="route-dot" style="background:#3B6EA8"></div>
+        <input class="route-input" id="startInput" data-i18n-placeholder="starting_point_ph" placeholder="📍 Starting point (e.g. Home, Medeu)" value=""/>
+      </div>
+      <div class="route-line" style="margin-left:5px;margin-bottom:.75rem"></div>
+      <div class="route-input-row">
+        <div class="route-dot" style="background:#C44B3B"></div>
+        <input class="route-input" id="endInput" data-i18n-placeholder="destination_ph" placeholder="🏁 Destination (e.g. Work, Kazakhstan City Center)" value=""/>
+      </div>
+      <div style="margin-top:1rem">
+        <input class="route-input" id="productInput" data-i18n-placeholder="route_form_prod_ph" placeholder="🔍 What do you need? (e.g. milk, shampoo)" style="width:100%;margin-bottom:.75rem"/>
+        <button class="btn btn-primary w-full" onclick="findRoute()" data-i18n="route_form_submit">🗺️ Find Stores On My Way</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="main-content">
+    <div>
+      <div style="margin-bottom:1.25rem">
+        <div class="section-tag" data-i18n="route_map_title">Route Map</div>
+        <h2 style="font-size:1.5rem" data-i18n="your_journey_title">Your journey + nearby stores</h2>
+      </div>
+      <div id="routeMap"></div>
+      <div class="toast toast-info" style="margin-top:1rem" data-i18n="on_my_way_tip">
+        💡 <strong>On My Way</strong> finds stores with minimal detour from your route — not just the nearest ones.
+      </div>
+    </div>
+
+    <div>
+      <div style="margin-bottom:1.25rem">
+        <div class="section-tag" data-i18n="route_stores_heading">Stores Along Route</div>
+        <h2 style="font-size:1.5rem" id="storeListTitle" data-i18n="route_stores_subheading">Enter your route</h2>
+      </div>
+      <div id="routeStoreList">
+        <div class="empty-route">
+          <div style="font-size:3rem;margin-bottom:.75rem">🗺️</div>
+          <p data-i18n="route_empty_state_title">Set your start, destination and product above to find stores along your route.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="js/i18n.js"></script>
+<script src="js/data.js"></script>
+<script>
+let routeMap=L.map('routeMap').setView([43.238,76.945],13);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap',maxZoom:19}).addTo(routeMap);
+
+// Draw mock route (home → work across Kazakhstan)
+const routeCoords=[[43.225,76.930],[43.228,76.935],[43.233,76.940],[43.238,76.945],[43.242,76.952],[43.246,76.958]];
+L.polyline(routeCoords,{color:'#3B6EA8',weight:4,dashArray:'8,4',opacity:.8}).addTo(routeMap);
+
+let markersGroup = L.layerGroup().addTo(routeMap);
+
+function updateMapMarkers() {
+  markersGroup.clearLayers();
+  
+  // Home and work markers
+  L.circleMarker(routeCoords[0],{radius:9,fillColor:'#3B6EA8',color:'#fff',weight:2,fillOpacity:1}).addTo(markersGroup).bindPopup('🏠 ' + t('home_label'));
+  L.circleMarker(routeCoords[routeCoords.length-1],{radius:9,fillColor:'#C44B3B',color:'#fff',weight:2,fillOpacity:1}).addTo(markersGroup).bindPopup('🏢 ' + t('work_label'));
+
+  // Store markers
+  STORES.forEach(s=>{
+    const icon=L.divIcon({
+      html:`<div style="width:34px;height:34px;border-radius:50%;background:${s.color};display:flex;align-items:center;justify-content:center;font-size:16px;border:2px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.25)">${s.emoji}</div>`,
+      iconSize:[34,34],iconAnchor:[17,17],className:''
+    });
+    L.marker([s.lat,s.lng],{icon}).addTo(markersGroup)
+      .bindPopup(`<strong>${s.emoji} ${s.name}</strong><br>${s.distance}km ${t('from_center_label')}<br><a href="stores.html?store=${s.id}" style="color:#2D4A2F;font-size:.8rem">${t('view_store_label')} →</a>`);
+  });
+}
+
+function updateInputDefaults() {
+  const startInput = document.getElementById('startInput');
+  const endInput = document.getElementById('endInput');
+  
+  const isDefaultStart = !startInput.value || 
+    startInput.value === 'Home, Medeu District' || 
+    startInput.value === 'Дом, Медеуский район' || 
+    startInput.value === 'Үй, Медеу ауданы' || 
+    startInput.value === '집, 메데우 지구';
+    
+  const isDefaultEnd = !endInput.value || 
+    endInput.value === 'Work, Kazakhstan City Center' || 
+    endInput.value === 'Работа, Центр города' || 
+    endInput.value === 'Жұмыс, Қала орталығы' || 
+    endInput.value === '직장, 도시 센터';
+
+  if (isDefaultStart) {
+    const translations = {
+      en: 'Home, Medeu District',
+      ru: 'Дом, Медеуский район',
+      kk: 'Үй, Медеу ауданы',
+      ko: '집, 메데우 지구'
+    };
+    startInput.value = translations[currentLang] || translations['en'];
+  }
+  
+  if (isDefaultEnd) {
+    const translations = {
+      en: 'Work, Kazakhstan City Center',
+      ru: 'Работа, Центр города',
+      kk: 'Жұмыс, Қала орталығы',
+      ko: '직장, 도시 센터'
+    };
+    endInput.value = translations[currentLang] || translations['en'];
+  }
+}
+
+function findRoute(){
+  const prod=document.getElementById('productInput').value.trim();
+  const start=document.getElementById('startInput').value.trim();
+  const end=document.getElementById('endInput').value.trim();
+  if(!start||!end){alert(t('alert_missing_route'));return;}
+
+  let products=prod?searchProducts(prod):PRODUCTS.slice(0,5);
+  if(products.length===0){alert(t('alert_no_products'));return;}
+
+  // Mock: rank stores by "detour" (simulated)
+  const detours=[
+    {storeId:'small',detour:0.2,note:'On your route'},
+    {storeId:'magnum',detour:0.4,note:'Minor detour'},
+    {storeId:'artem',detour:0.8,note:'Slight detour'},
+    {storeId:'green',detour:1.4,note:'Small detour'},
+  ];
+
+  document.getElementById('storeListTitle').textContent=t('route_stores_found_msg').replace('{count}', detours.length);
+  const list=document.getElementById('routeStoreList');
+  list.innerHTML='';
+
+  const noteKeys = {
+    'On your route': 'note_on_route',
+    'Minor detour': 'note_minor',
+    'Slight detour': 'note_slight',
+    'Small detour': 'note_small'
+  };
+
+  detours.forEach((d,i)=>{
+    const store=getStoreById(d.storeId);
+    if(!store)return;
+    const relevantProds=prod?searchProducts(prod).filter(p=>p.price[d.storeId]>0):[];
+    const cheapest=relevantProds.length?Math.min(...relevantProds.map(p=>p.price[d.storeId])):null;
+    const detourNote = t(noteKeys[d.note] || 'note_minor');
+    
+    list.innerHTML+=`<div class="route-store-card ${i===0?'best':''}" onclick="routeMap.setView([${store.lat},${store.lng}],16)">
+      <div class="rsc-num">${i+1}</div>
+      <div style="flex:1">
+        <div class="rsc-name">${store.emoji} ${store.name} ${i===0?`<span class="badge badge-accent">${t('best_route_badge')}</span>`:''}</div>
+        <div class="rsc-sub">📍 ${store.address} · 🕐 ${store.hours}</div>
+        <div class="rsc-detour">+${d.detour}km ${t('detour_label')} · ${detourNote}</div>
+        ${cheapest?`<div style="font-size:.82rem;margin-top:.3rem">${t('from_label')} <strong style="color:var(--forest)">₸${cheapest.toLocaleString()}</strong></div>`:''}
+        ${relevantProds.length?`<div style="font-size:.75rem;color:var(--muted);margin-top:.2rem">${relevantProds.slice(0,2).map(p=>p.name).join(', ')}${relevantProds.length>2?` +${relevantProds.length-2} ${t('more_label')}`:''}</div>`:''}
+      </div>
+      <a href="stores.html?store=${store.id}" class="btn btn-ghost btn-sm">🗺 ${t('go_label')}</a>
+    </div>`;
+  });
+
+  list.innerHTML+=`<div class="toast toast-success" style="margin-top:1rem">✅ ${t('found_stores_banner').replace('{count}', detours.length).replace('{start}', start).replace('{end}', end)}</div>`;
+}
+
+// Auto-run with example
+setTimeout(()=>{
+  updateInputDefaults();
+  updateMapMarkers();
+  document.getElementById('productInput').value='milk';
+  findRoute();
+},600);
+
+window.addEventListener('languageChanged', () => {
+  updateInputDefaults();
+  updateMapMarkers();
+  findRoute();
+});</script>
+<script src="js/nav.js"></script>
+</body>
+</html>

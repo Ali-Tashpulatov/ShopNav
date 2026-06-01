@@ -1,0 +1,23 @@
+#!/bin/bash
+# This script is a placeholder to document all the images that need regeneration.
+# The actual regeneration is done by the AI agent using its generate_image tool.
+echo "The following fitness product images need to be replaced with real product photos:"
+echo ""
+echo "  1. img/whey-protein.png         - Whey Protein Gold Standard tub"
+echo "  2. img/casein-protein.png        - Casein Protein tub"
+echo "  3. img/creatine.png              - Creatine Monohydrate container"
+echo "  4. img/bcaa.png                  - BCAA Powder container"
+echo "  5. img/pre-workout.png           - Pre-Workout Energy tub"
+echo "  6. img/omega3.png                - Omega-3 Fish Oil capsules bottle"
+echo "  7. img/collagen.png              - Collagen Peptides container"
+echo "  8. img/multivitamin.png          - Multivitamin bottle"
+echo "  9. img/protein-bar.png           - Protein Bar wrapper"
+echo " 10. img/protein-shake.png         - Protein Shake RTD bottle"
+echo " 11. img/protein-granola.png       - Protein Granola bag"
+echo " 12. img/greek-yogurt.png          - Greek Yogurt cup"
+echo " 13. img/peanut-butter.png         - Peanut Butter jar"
+echo " 14. img/chickpeas-roasted.png     - Roasted Chickpeas bag"
+echo " 15. img/mixed-nuts.png            - Mixed Nuts bag"
+echo " 16. img/oatmeal-fitness.png       - Oatmeal box"
+echo " 17. img/monster-zero.png          - Monster Energy Zero can"
+echo " 18. img/electrolyte-drink.png     - Powerade bottle"

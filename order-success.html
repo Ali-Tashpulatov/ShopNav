@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Order Confirmed — ShopNav</title>
+<meta name="description" content="Your ShopNav order has been placed successfully."/>
+<link rel="stylesheet" href="css/main.css"/>
+<style>
+.page-wrap {
+  padding-top: 64px;
+  background: var(--cream);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding-bottom: 3rem;
+}
+.success-card {
+  background: var(--white);
+  border: 1px solid var(--sand);
+  border-radius: 24px;
+  padding: 3rem 2rem;
+  max-width: 520px;
+  width: 90%;
+  text-align: center;
+  box-shadow: 0 20px 40px rgba(0,0,0,.05);
+  position: relative;
+  overflow: hidden;
+  animation: slideUp 0.5s ease-out forwards;
+}
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.success-icon-wrap {
+  width: 80px; height: 80px;
+  background: rgba(52,211,153,.15);
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 1.5rem;
+  color: #34d399; font-size: 2.5rem;
+  animation: popIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) 0.2s both;
+}
+@keyframes popIn {
+  from { transform: scale(0); }
+  to   { transform: scale(1); }
+}
+.success-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 2rem; font-weight: 800;
+  color: var(--forest); margin-bottom: .5rem;
+}
+.success-desc {
+  font-size: 1rem; color: var(--muted);
+  margin-bottom: 2rem; line-height: 1.5;
+}
+
+/* Order details box */
+.order-details {
+  background: rgba(253,248,240,.6);
+  border: 1px dashed var(--sand);
+  border-radius: 16px;
+  padding: 1.25rem;
+  text-align: left;
+  margin-bottom: 1.5rem;
+}
+.detail-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: .65rem;
+  font-size: .9rem;
+  gap: 1rem;
+}
+.detail-row:last-child { margin-bottom: 0; padding-top: .65rem; border-top: 1px solid var(--light); }
+.detail-label { color: var(--muted); white-space: nowrap; }
+.detail-value { font-weight: 700; color: var(--ink); text-align: right; }
+.detail-value.total { font-size: 1.25rem; color: var(--forest); }
+
+/* Item pills */
+.item-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .4rem;
+  margin-top: .75rem;
+  padding-top: .75rem;
+  border-top: 1px solid var(--light);
+}
+.item-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: .3rem;
+  background: var(--warm);
+  border: 1px solid var(--sand);
+  border-radius: 100px;
+  padding: .25rem .65rem;
+  font-size: .76rem;
+  font-weight: 500;
+}
+
+/* Order ID badge */
+.order-id-badge {
+  display: inline-block;
+  background: var(--warm);
+  border: 1px solid var(--sand);
+  border-radius: 8px;
+  padding: .3rem .75rem;
+  font-family: 'DM Mono', monospace;
+  font-size: .78rem;
+  color: var(--muted);
+  margin-bottom: 1.5rem;
+}
+
+/* Confetti */
+.confetti {
+  position: fixed;
+  width: 10px; height: 10px;
+  background: #34d399;
+  border-radius: 50%;
+  animation: fall linear forwards;
+  pointer-events: none;
+}
+@keyframes fall {
+  to { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+}
+
+/* Payment method badge */
+.pm-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: .35rem;
+  padding: .2rem .65rem;
+  border-radius: 100px;
+  font-size: .8rem;
+  font-weight: 600;
+}
+.pm-badge.cash  { background: rgba(52,211,153,.12); color: #14865a; }
+.pm-badge.card  { background: rgba(59,110,168,.12); color: var(--blue); }
+.pm-badge.kaspi { background: rgba(204,0,0,.08);    color: #cc0000; }
+</style>
+</head>
+<body>
+<nav class="navbar">
+  <a href="index.html" class="navbar-logo">
+    <span class="logo-icon">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
+        <line x1="3" y1="6" x2="21" y2="6"></line>
+        <path d="M16 10a4 4 0 0 1-8 0"></path>
+      </svg>
+    </span>
+    ShopNav<div class="logo-dot"></div>
+  </a>
+  <div class="navbar-links">
+    <a href="index.html">Home</a>
+    <a href="search.html">Search</a>
+    <a href="cook.html">Cook Mode</a>
+    <a href="stores.html">Stores</a>
+    <a href="cart.html">Cart</a>
+  </div>
+  <div class="navbar-actions"><a href="#">❤️</a><a href="#">👤</a></div>
+  <div class="navbar-burger" onclick="toggleMenu()">☰</div>
+</nav>
+
+<div class="page-wrap" id="confettiContainer">
+  <div class="success-card" id="successCard">
+    <div class="success-icon-wrap">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M20 6L9 17l-5-5"></path>
+      </svg>
+    </div>
+    <h1 class="success-title">Order Confirmed!</h1>
+    <p class="success-desc" id="successDesc">Your items have been processed successfully. Thank you for shopping with ShopNav.</p>
+
+    <div class="order-id-badge" id="orderIdBadge">Loading order…</div>
+
+    <div class="order-details" id="orderDetails">
+      <div class="detail-row">
+        <span class="detail-label">Loading…</span>
+      </div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: .75rem;">
+      <a href="search.html" class="btn btn-primary w-full" style="padding: .8rem;">Continue Shopping</a>
+      <a href="order-history.html" class="btn btn-ghost w-full" style="padding: .8rem;">📋 View Order History</a>
+    </div>
+  </div>
+</div>
+
+<script src="js/i18n.js"></script>
+<script src="js/data.js"></script>
+<script src="js/cart-api.js"></script>
+<script>
+const PM_ICONS  = { cash: '💵', card: '💳', kaspi: '🇰🇿' };
+const PM_LABELS = { cash: 'Cash on Delivery', card: 'Card', kaspi: 'Kaspi Pay' };
+
+async function loadOrder() {
+  const params  = new URLSearchParams(window.location.search);
+  const orderId = params.get('orderId');
+
+  // Fallback for legacy redirect (total + method params)
+  if (!orderId) {
+    const total  = params.get('total') || '0';
+    const method = params.get('method') || 'Cash';
+    renderFallback(total, method);
+    return;
+  }
+
+  try {
+    const order = await apiGetOrder(orderId);
+    renderOrder(order);
+  } catch (err) {
+    // If server unreachable, show basic info
+    document.getElementById('orderIdBadge').textContent = '#' + orderId.slice(0, 8).toUpperCase();
+    document.getElementById('orderDetails').innerHTML = `
+      <div class="detail-row">
+        <span class="detail-label">Status</span>
+        <span class="detail-value">✅ Confirmed</span>
+      </div>`;
+  }
+}
+
+function renderOrder(order) {
+  const pm    = order.payment_method || 'cash';
+  const icon  = PM_ICONS[pm]  || '💵';
+  const label = PM_LABELS[pm] || pm;
+
+  document.getElementById('orderIdBadge').textContent =
+    'Order #' + order.id.slice(0, 8).toUpperCase();
+
+  document.getElementById('successDesc').textContent =
+    `Placed by ${order.placed_by || 'you'} — your items are on their way!`;
+
+  // Build delivery info snippet
+  let deliveryHTML = '';
+  try {
+    const pd = typeof order.paymentDetails === 'string'
+      ? JSON.parse(order.paymentDetails) : (order.paymentDetails || {});
+
+    if (pm === 'cash' && (pd.address || pd.name)) {
+      deliveryHTML = `
+        <div class="detail-row">
+          <span class="detail-label">Deliver to</span>
+          <span class="detail-value" style="font-size:.85rem">${[pd.name, pd.address, pd.city].filter(Boolean).join(', ')}</span>
+        </div>`;
+    } else if (pm === 'card' && pd.cardHolder) {
+      deliveryHTML = `
+        <div class="detail-row">
+          <span class="detail-label">Card</span>
+          <span class="detail-value">•••• •••• •••• ${(pd.cardNumber || '').replace(/\s/g,'').slice(-4)}</span>
+        </div>`;
+    } else if (pm === 'kaspi' && pd.phone) {
+      deliveryHTML = `
+        <div class="detail-row">
+          <span class="detail-label">Kaspi Phone</span>
+          <span class="detail-value">${pd.phone}</span>
+        </div>`;
+    }
+  } catch(e) {}
+
+  // Item pills
+  const pillsHTML = order.items.slice(0, 8).map(item =>
+    `<span class="item-pill">${item.emoji || '📦'} ${item.name} ×${item.quantity || 1}</span>`
+  ).join('') + (order.items.length > 8
+    ? `<span class="item-pill">+${order.items.length - 8} more</span>` : '');
+
+  document.getElementById('orderDetails').innerHTML = `
+    <div class="detail-row">
+      <span class="detail-label">Payment</span>
+      <span class="detail-value">
+        <span class="pm-badge ${pm}">${icon} ${label}</span>
+      </span>
+    </div>
+    ${deliveryHTML}
+    <div class="detail-row">
+      <span class="detail-label">Items</span>
+      <span class="detail-value">${order.items.length} product${order.items.length !== 1 ? 's' : ''}</span>
+    </div>
+    <div class="detail-row">
+      <span class="detail-label">Total</span>
+      <span class="detail-value total">₸${Number(order.total || 0).toLocaleString()}</span>
+    </div>
+    ${pillsHTML ? `<div class="item-pills">${pillsHTML}</div>` : ''}
+  `;
+}
+
+function renderFallback(total, method) {
+  document.getElementById('orderIdBadge').textContent = 'Order Confirmed';
+  document.getElementById('orderDetails').innerHTML = `
+    <div class="detail-row">
+      <span class="detail-label">Payment Method</span>
+      <span class="detail-value">${method}</span>
+    </div>
+    <div class="detail-row">
+      <span class="detail-label">Total Amount</span>
+      <span class="detail-value total">₸${parseFloat(total).toLocaleString()}</span>
+    </div>
+  `;
+}
+
+// Confetti
+function launchConfetti() {
+  const container = document.getElementById('confettiContainer');
+  const colors = ['#34d399', '#3b82f6', '#f59e0b', '#ec4899', '#2D4A2F'];
+  for (let i = 0; i < 40; i++) {
+    const conf = document.createElement('div');
+    conf.className = 'confetti';
+    conf.style.left = Math.random() * 100 + 'vw';
+    conf.style.top  = '-20px';
+    conf.style.width = (Math.random() * 8 + 6) + 'px';
+    conf.style.height = (Math.random() * 8 + 6) + 'px';
+    conf.style.borderRadius = Math.random() > .5 ? '50%' : '2px';
+    conf.style.background = colors[Math.floor(Math.random() * colors.length)];
+    conf.style.animationDuration = (Math.random() * 3 + 2) + 's';
+    conf.style.animationDelay = (Math.random() * 1.5) + 's';
+    container.appendChild(conf);
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  loadOrder();
+  launchConfetti();
+});
+</script>
+<script src="js/nav.js"></script>
+</body>
+</html>

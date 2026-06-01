@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>ShopNav — Find Any Product in Kazakhstan Stores</title>
+<meta name="description" content="Find which Kazakhstan supermarket stocks the product you need. Compare prices, get directions, and cook smarter with ShopNav."/>
+<link rel="stylesheet" href="css/main.css"/>
+<style>
+.hero{min-height:100vh;background:var(--forest);display:flex;flex-direction:column;justify-content:center;align-items:center;padding:8rem 1.5rem 5rem;position:relative;overflow:hidden;text-align:center}
+.hero-bg{position:absolute;inset:0;}
+.hero-dots{position:absolute;inset:0;background-image:radial-gradient(circle,rgba(255,255,255,.05) 1px,transparent 1px);background-size:30px 30px}
+.hero-badge{display:inline-flex;align-items:center;gap:8px;background:rgba(242,160,59,.15);border:1px solid rgba(242,160,59,.3);color:var(--accent);font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;padding:6px 18px;border-radius:100px;margin-bottom:2rem;position:relative;z-index:1}
+.hero-badge::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--accent);animation:pulse 2s ease infinite}
+.hero h1{position:relative;z-index:1;color:var(--cream);margin-bottom:1.2rem}
+.hero h1 em{font-style:italic;color:var(--accent)}
+.hero-sub{position:relative;z-index:1;color:rgba(253,248,240,.65);font-size:1.1rem;max-width:560px;margin-bottom:2.5rem;font-weight:300}
+.hero-search{position:relative;z-index:200;width:100%;max-width:640px;isolation:isolate}
+.hero-search .search-bar{background:rgba(253,248,240,.97)}
+.search-types{position:relative;z-index:1;display:flex;align-items:center;justify-content:center;gap:.5rem;margin-top:1rem;flex-wrap:wrap}
+.search-type-btn{display:inline-flex;align-items:center;gap:.4rem;padding:.4rem 1rem;border-radius:100px;font-size:.82rem;font-weight:500;background:rgba(253,248,240,.1);border:1px solid rgba(253,248,240,.2);color:rgba(253,248,240,.75);cursor:pointer;transition:all .2s ease}
+.search-type-btn:hover{background:rgba(253,248,240,.18);color:var(--cream)}
+
+.hero-stats{position:relative;z-index:1;display:flex;gap:1.5rem;margin-top:3.5rem;flex-wrap:wrap;justify-content:center}
+@media(min-width:480px){.hero-stats{gap:2.5rem}}
+
+.stat{text-align:center}
+
+.stat-num{font-family:'Playfair Display',serif;font-size:2rem;font-weight:900;color:var(--cream);line-height:1}
+.stat-label{font-size:.78rem;color:rgba(253,248,240,.55);margin-top:.3rem;letter-spacing:.06em}
+.stat-div{width:1px;background:rgba(253,248,240,.15);align-self:stretch}
+.modes-section{background:var(--ink);padding:5rem 1.5rem}
+.mode-card{background:rgba(253,248,240,.06);border:1px solid rgba(253,248,240,.1);border-radius:20px;padding:2rem;transition:all .3s ease;cursor:pointer;position:relative;overflow:hidden}
+.mode-card:hover{background:rgba(253,248,240,.1);transform:translateY(-4px);border-color:rgba(253,248,240,.2)}
+.mode-icon{font-size:2.5rem;margin-bottom:1rem}
+.mode-title{font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:700;color:var(--cream);margin-bottom:.5rem}
+.mode-desc{font-size:.9rem;color:rgba(253,248,240,.55);line-height:1.6}
+.mode-tag{display:inline-block;margin-top:1rem;font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--accent)}
+.mode-card.featured{border-color:rgba(242,160,59,.4);background:rgba(242,160,59,.08)}
+.mode-card.featured:hover{background:rgba(242,160,59,.12)}
+.deals-row{display:flex;gap:1rem;overflow-x:auto;padding-bottom:.5rem;scrollbar-width:none}
+.deals-row::-webkit-scrollbar{display:none}
+.deal-card{background:var(--white);border:1px solid var(--sand);border-radius:14px;padding:1rem;min-width:200px;flex-shrink:0;transition:all .2s ease;cursor:pointer}
+.deal-card:hover{box-shadow:var(--shadow-lg);transform:translateY(-3px)}
+.deal-emoji{font-size:2.2rem;margin-bottom:.6rem}
+.deal-name{font-weight:600;font-size:.9rem;color:var(--ink);margin-bottom:.2rem}
+.deal-stores{font-size:.75rem;color:var(--muted)}
+.deal-price-row{display:flex;align-items:baseline;gap:.5rem;margin-top:.5rem}
+.deal-price{font-weight:700;font-size:1.1rem;color:var(--forest)}
+.deal-old{font-size:.78rem;color:var(--muted);text-decoration:line-through}
+.deal-drop{font-size:.75rem;font-weight:600;color:var(--danger)}
+.cats-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:1rem}
+@media(min-width:800px){.cats-grid{grid-template-columns:repeat(4,1fr)}}
+.how-steps{display:grid;grid-template-columns:1fr 1fr;gap:1rem;position:relative}
+
+.how-steps::before{display:none;content:'';position:absolute;top:28px;left:10%;right:10%;height:2px;background:linear-gradient(90deg,var(--forest),var(--accent));opacity:.2;border-radius:2px}
+.step-item{text-align:center;position:relative;z-index:1}
+.step-num{width:56px;height:56px;border-radius:50%;border:2px solid var(--sand);background:var(--white);display:flex;align-items:center;justify-content:center;font-family:'DM Mono',monospace;font-weight:600;font-size:.9rem;color:var(--forest);margin:0 auto .75rem}
+.step-icon{font-size:1.3rem;margin-bottom:.5rem}
+.step-title{font-weight:700;font-size:.88rem;margin-bottom:.3rem}
+.step-desc{font-size:.78rem;color:var(--muted);line-height:1.5}
+@media(min-width:720px){.how-steps{grid-template-columns:repeat(5,1fr)}.how-steps::before{display:block}}
+footer{background:var(--charcoal);color:rgba(253,248,240,.45);text-align:center;padding:3rem 1.5rem;font-size:.85rem;line-height:2.2}
+.footer-logo{font-family:'Playfair Display',serif;font-size:1.8rem;font-weight:900;color:var(--cream);margin-bottom:.5rem}
+footer strong{color:var(--accent)}
+.footer-links{display:flex;justify-content:center;gap:1.5rem;margin:1rem 0;flex-wrap:wrap}
+.footer-links a{color:rgba(253,248,240,.5);font-size:.84rem;transition:color .2s}
+.footer-links a:hover{color:var(--cream)}
+.qr-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:2000;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
+.qr-modal.open{display:flex}
+.qr-box{background:var(--white);border-radius:20px;padding:2rem;max-width:400px;width:90%;text-align:center}
+.qr-video{width:100%;border-radius:12px;background:#000;aspect-ratio:1;margin:1rem 0}
+.photo-input{display:none}
+#searchSuggestions{
+  position:absolute;
+  top:calc(100% + 10px);
+  left:0;right:0;
+  background:var(--white);
+  border:1.5px solid var(--sand);
+  border-radius:16px;
+  box-shadow:0 16px 48px rgba(0,0,0,.18),0 4px 16px rgba(0,0,0,.08);
+  z-index:9999;
+  overflow:hidden;
+  display:none;
+  animation:fadeIn .15s ease;
+}
+.suggestion-item{
+  padding:.85rem 1.1rem;
+  cursor:pointer;
+  display:flex;
+  align-items:center;
+  gap:.85rem;
+  font-size:.92rem;
+  color:var(--ink);
+  transition:background .15s,padding-left .15s;
+  border-bottom:1px solid var(--light);
+}
+.suggestion-item:last-child{border-bottom:none}
+.suggestion-item:hover{background:var(--warm);padding-left:1.35rem}
+.suggestion-emoji{font-size:1.25rem;flex-shrink:0;width:28px;text-align:center}
+.suggestion-name{font-weight:600;color:var(--ink)}
+.suggestion-cat{font-size:.75rem;color:var(--muted);margin-top:1px}
+
+/* ── SPLASH SCREEN ─────────────────────────────────────────────────────────
+   Pure CSS animation — runs the instant the browser parses this stylesheet,
+   completely independent of any JS or CDN network request.
+   The overlay fades out at 0.8s via the splashOut keyframe.
+   Pointer-events: none so the homepage beneath is always interactive.
+──────────────────────────────────────────────────────────────────────────── */
+#splash-screen {
+  position: fixed;
+  inset: 0;
+  background: linear-gradient(135deg, #0f1f15 0%, #0a1a0e 100%);
+  z-index: 9999;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  pointer-events: none;
+  /* Full splash lifecycle: visible for 0.6s, then fades out over 0.25s */
+  animation: splashOut 0.25s ease-out 0.65s forwards;
+}
+#splash-screen.splash-skip {
+  /* Set by inline JS on revisit — hides it instantly with no flicker */
+  display: none !important;
+}
+#splash-logo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  /* Logo pops in with a spring-like scale — starts immediately */
+  animation: splashLogoIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+@keyframes splashLogoIn {
+  from { opacity: 0; transform: scale(0.82); }
+  to   { opacity: 1; transform: scale(1); }
+}
+@keyframes splashOut {
+  from { opacity: 1; }
+  to   { opacity: 0; pointer-events: none; }
+}
+</style>
+<!-- Inline skip-logic: runs synchronously before any paint.
+     If the user has already seen the splash, hide it before first render. -->
+<script>
+  (function(){
+    if (sessionStorage.getItem('splashShown')) {
+      document.addEventListener('DOMContentLoaded', function() {
+        var s = document.getElementById('splash-screen');
+        if (s) s.classList.add('splash-skip');
+      });
+    } else {
+      sessionStorage.setItem('splashShown', 'true');
+      // After CSS animation completes (~0.9s), remove the element entirely
+      // so it doesn't sit in the accessibility tree.
+      window.addEventListener('load', function() {
+        var s = document.getElementById('splash-screen');
+        if (s) setTimeout(function(){ s.remove(); }, 950);
+      });
+    }
+  })();
+</script>
+</head>
+<body class="page-home">
+
+
+
+<!-- SPLASH SCREEN -->
+<div id="splash-screen">
+  <div id="splash-logo" style="text-align:center;">
+    <div style="background:rgba(52,211,153,0.08);border:1px solid rgba(52,211,153,0.22);border-radius:24px;padding:24px;box-shadow:0 20px 70px rgba(0,0,0,0.6),0 0 30px rgba(5,150,105,0.1);display:inline-flex;align-items:center;justify-content:center;margin-bottom:20px;">
+      <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
+        <line x1="3" y1="6" x2="21" y2="6"></line>
+        <path d="M16 10a4 4 0 0 1-8 0"></path>
+        <circle cx="12" cy="15" r="1.5" fill="#34d399" stroke="none"></circle>
+      </svg>
+    </div>
+    <div style="font-family:'Inter',sans-serif;font-size:3rem;font-weight:800;letter-spacing:-0.05em;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#fff 0%,#c8f5e2 50%,#34d399 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;filter:drop-shadow(0 0 16px rgba(5,150,105,0.3));">
+      ShopNav
+    </div>
+  </div>
+</div>
+
+<!-- NAVBAR -->
+<nav class="navbar" id="mainNavbar" data-animate="navbar">
+  <a href="index.html" class="navbar-logo">
+    <span class="logo-icon">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
+        <line x1="3" y1="6" x2="21" y2="6"></line>
+        <path d="M16 10a4 4 0 0 1-8 0"></path>
+      </svg>
+    </span>
+    ShopNav<div class="logo-dot"></div>
+  </a>
+  <div class="navbar-links">
+    <a href="index.html" class="active" data-i18n="nav_home">Home</a>
+    <a href="search.html" data-i18n="nav_search">Search</a>
+    <a href="cook.html" data-i18n="nav_cook">Cook Mode</a>
+    <a href="stores.html" data-i18n="nav_stores">Stores</a>
+    <a href="cart.html" data-i18n="nav_cart">Cart</a>
+  </div>
+  <div class="navbar-actions">
+    <a href="#" title="Favorites">❤️</a>
+    <a href="#" title="Profile">👤</a>
+  </div>
+  <div class="navbar-burger" onclick="toggleMenu()">☰</div>
+</nav>
+
+<!-- HERO -->
+<section class="hero" id="heroSection" data-animate="hero">
+  <div class="hero-bg" id="heroBg"></div>
+  <div class="hero-dots"></div>
+  <div class="hero-badge" data-animate="hero-badge" data-i18n="hero_badge">🇰🇿 Kazakhstan's Smart Shopping Platform</div>
+  <h1 data-animate="hero-title" class="hero-title-neon"><span class="hero-word" data-i18n="hero_title_1">Find</span> <em><span class="hero-word" data-i18n="hero_title_2">Any</span></em> <span class="hero-word" data-i18n="hero_title_3">Product</span><br><span class="hero-word" data-i18n="hero_title_4">Near You</span></h1>
+  <p class="hero-sub" data-animate="hero-sub"><span data-i18n="hero_subtitle">Compare prices across supermarkets in </span><strong id="heroCityName">Kazakhstan</strong><span data-i18n="hero_subtitle_end"> — instantly. No more wasted trips.</span></p>
+
+  <div class="hero-search" style="position:relative" data-animate="hero-search" id="heroSearchContainer">
+    <div class="search-bar" id="heroSearchBar">
+      <span style="font-size:18px">🔍</span>
+      <input type="text" id="heroInput" data-i18n-placeholder="search_placeholder" placeholder="Search products (e.g., milk, bread)..." autocomplete="off" oninput="onHeroInput(this.value)" onkeydown="if(event.key==='Enter')doSearch()"/>
+      <div class="search-bar-actions">
+        <div class="search-bar-icon" title="Search by photo" onclick="document.getElementById('photoInput').click()">📷</div>
+        <div class="search-bar-icon" title="Scan QR / Barcode" onclick="openBarcodeScanner()">📲</div>
+        <button class="search-bar-btn" onclick="doSearch()" data-i18n="nav_search">Search</button>
+      </div>
+    </div>
+    <div id="searchSuggestions"></div>
+  </div>
+
+  <div class="search-types" data-animate="search-types">
+    <div class="search-type-btn" onclick="document.getElementById('heroInput').focus()" data-i18n="search_type_text">⌨️ Text Search</div>
+    <div class="search-type-btn" onclick="document.getElementById('photoInput').click()" data-i18n="search_type_photo">📷 Photo Search</div>
+    <div class="search-type-btn" onclick="openBarcodeScanner()" data-i18n="search_type_qr">📲 QR / Barcode</div>
+    <div class="search-type-btn" onclick="window.location.href='cook.html'" data-i18n="search_type_cook">🍲 Cook a Dish</div>
+  </div>
+  <input type="file" id="photoInput" class="photo-input" accept="image/*" onchange="handlePhoto(this)"/>
+
+  <div class="hero-stats" data-animate="hero-stats">
+    <div class="stat"><div class="stat-num">50+</div><div class="stat-label" data-i18n="stat_products">Products Tracked</div></div>
+    <div class="stat-div"></div>
+    <div class="stat"><div class="stat-num" id="storeCountStat">13</div><div class="stat-label" data-i18n="stat_stores">Partner Stores</div></div>
+    <div class="stat-div"></div>
+    <div class="stat"><div class="stat-num">₸0</div><div class="stat-label" data-i18n="stat_free">Always Free</div></div>
+    <div class="stat-div"></div>
+    <div class="stat"><div class="stat-num" data-i18n="stat_live">Live</div><div class="stat-label" data-i18n="stat_stock">Stock Updates</div></div>
+  </div>
+</section>
+
+
+<!-- MODES -->
+<section class="modes-section">
+  <div class="container">
+    <div class="section-tag gold" style="margin-bottom:.6rem" data-i18n="simple_steps_tag">How it works</div>
+    <h2 style="color:var(--cream);margin-bottom:.75rem" data-i18n="modes_title">Three ways to shop smarter</h2>
+    <p style="color:rgba(253,248,240,.5);margin-bottom:3rem;max-width:520px" data-i18n="modes_desc">Whether you need one item, a full meal, or a shared household shop — ShopNav has a mode for you.</p>
+    <div class="grid-3" style="gap:1.25rem">
+      <div class="mode-card" onclick="window.location.href='search.html'">
+        <div class="mode-icon">🔍</div>
+        <div class="mode-title" data-i18n="find_mode_title">Find Mode</div>
+        <div class="mode-desc" data-i18n="find_mode_desc">Search for any product and instantly see which stores carry it, the price, unit price per 100g/ml, and distance from you.</div>
+        <div class="mode-tag" data-i18n="find_mode_tag">→ Start searching</div>
+      </div>
+      <div class="mode-card featured" onclick="window.location.href='cook.html'">
+        <div class="mode-icon">🍲</div>
+        <div class="mode-title" data-i18n="cook_mode_title">Cook Mode</div>
+        <div class="mode-desc" data-i18n="cook_mode_desc">Enter a dish like "Borscht" or "Plov" and get all ingredients mapped to nearby stores — with the cheapest basket automatically calculated.</div>
+        <div class="mode-tag" data-i18n="cook_mode_tag">⭐ Most popular</div>
+      </div>
+      <div class="mode-card" onclick="window.location.href='cart.html'">
+        <div class="mode-icon">🛒</div>
+        <div class="mode-title" data-i18n="cart_mode_title">Cart Mode</div>
+        <div class="mode-desc" data-i18n="cart_mode_desc">Share a shopping list with your household. Each person sees which items are closest to them — split the trip, save time.</div>
+        <div class="mode-tag" data-i18n="cart_mode_tag">→ Share a cart</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CATEGORIES -->
+<section class="section" style="background:var(--cream)">
+  <div class="container">
+    <div class="flex-between" style="margin-bottom:2rem;flex-wrap:wrap;gap:1rem">
+      <div>
+        <div class="section-tag">Browse</div>
+        <h2 data-i18n="sec_categories">Shop by Category</h2>
+      </div>
+      <a href="search.html" class="btn btn-ghost btn-sm" data-i18n="btn_view_all">View all →</a>
+    </div>
+    <div class="cats-grid" id="catsGrid"></div>
+  </div>
+</section>
+
+
+<!-- TODAY'S DEALS -->
+<section class="section" style="background:var(--warm);padding-top:3rem">
+  <div class="container">
+    <div class="flex-between" style="margin-bottom:1.5rem;flex-wrap:wrap;gap:1rem">
+      <div>
+        <div class="section-tag">🔥 Hot right now</div>
+        <h2 data-i18n="sec_deals">Price Drops Today</h2>
+      </div>
+      <a href="search.html?filter=deals" class="btn btn-ghost btn-sm" data-i18n="btn_view_all">All deals →</a>
+    </div>
+    <div class="deals-row" id="dealsRow"></div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section class="section" style="background:var(--white)">
+  <div class="container">
+    <div class="text-center" style="margin-bottom:3rem">
+      <div class="section-tag text-center" data-i18n="simple_steps_tag">Simple</div>
+      <h2 data-i18n="five_steps_title">From search to store in 5 steps</h2>
+    </div>
+    <div class="how-steps">
+      <div class="step-item"><div class="step-num">01</div><div class="step-icon">🔍</div><div class="step-title" data-i18n="step1_title">Search</div><div class="step-desc" data-i18n="step1_desc">Type, scan or photograph what you need</div></div>
+      <div class="step-item"><div class="step-num">02</div><div class="step-icon">📍</div><div class="step-title" data-i18n="step2_title">Set Location</div><div class="step-desc" data-i18n="step2_desc">Use GPS or enter your address</div></div>
+      <div class="step-item"><div class="step-num">03</div><div class="step-icon">⚡</div><div class="step-title" data-i18n="step3_title">Compare</div><div class="step-desc" data-i18n="step3_desc">See prices, unit costs & distances side by side</div></div>
+      <div class="step-item"><div class="step-num">04</div><div class="step-icon">🛒</div><div class="step-title" data-i18n="step4_title">Choose</div><div class="step-desc" data-i18n="step4_desc">Pick the best store for your budget & route</div></div>
+      <div class="step-item"><div class="step-num">05</div><div class="step-icon">🗺️</div><div class="step-title" data-i18n="step5_title">Navigate</div><div class="step-desc" data-i18n="step5_desc">Get directions and the exact aisle number</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- UNIQUE FEATURES -->
+<section class="section" style="background:var(--cream)">
+  <div class="container">
+    <div class="text-center" style="margin-bottom:3rem">
+      <div class="section-tag" data-i18n="why_shopnav_tag">Why ShopNav</div>
+      <h2 data-i18n="why_shopnav_title">Features that actually help</h2>
+    </div>
+    <div class="grid-3" style="gap:1.25rem">
+      <div class="card card-padded reveal">
+        <div style="font-size:2rem;margin-bottom:.75rem">📊</div>
+        <h3 style="font-size:1.1rem;margin-bottom:.5rem" data-i18n="feat1_title">Unit Price Normalization</h3>
+        <p class="text-sm text-muted" data-i18n="feat1_desc">Magnum's 1L milk vs Small's 800ml? We show ₸ per 100ml so you always compare fairly — automatically.</p>
+      </div>
+      <div class="card card-padded reveal">
+        <div style="font-size:2rem;margin-bottom:.75rem">🗺️</div>
+        <h3 style="font-size:1.1rem;margin-bottom:.5rem" data-i18n="feat2_title">"On My Way" Mode</h3>
+        <p class="text-sm text-muted" data-i18n="feat2_desc">Enter your route (home → work) and see stores along the way — not just the nearest, but the most convenient.</p>
+      </div>
+      <div class="card card-padded reveal">
+        <div style="font-size:2rem;margin-bottom:.75rem">🏷️</div>
+        <h3 style="font-size:1.1rem;margin-bottom:.5rem" data-i18n="feat3_title">Loyalty Card Prices</h3>
+        <p class="text-sm text-muted" data-i18n="feat3_desc">Register your Magnum or Small card and see your real effective price after points and discounts applied.</p>
+      </div>
+      <div class="card card-padded reveal">
+        <div style="font-size:2rem;margin-bottom:.75rem">📅</div>
+        <h3 style="font-size:1.1rem;margin-bottom:.5rem" data-i18n="feat4_title">Freshness Reports</h3>
+        <p class="text-sm text-muted" data-i18n="feat4_desc">Community-reported expiry status. See if today's dairy is fresh before you make the trip — for dairy especially.</p>
+      </div>
+      <div class="card card-padded reveal">
+        <div style="font-size:2rem;margin-bottom:.75rem">📦</div>
+        <h3 style="font-size:1.1rem;margin-bottom:.5rem" data-i18n="feat5_title">Restock Patterns</h3>
+        <p class="text-sm text-muted" data-i18n="feat5_desc">"Green Market usually restocks imported goods on Thursdays." Quiet data insights from real shopping patterns.</p>
+      </div>
+      <div class="card card-padded reveal">
+        <div style="font-size:2rem;margin-bottom:.75rem">📲</div>
+        <h3 style="font-size:1.1rem;margin-bottom:.5rem" data-i18n="feat6_title">QR & Photo Search</h3>
+        <p class="text-sm text-muted" data-i18n="feat6_desc">Scan a barcode or take a photo of a product to instantly find it across all stores. No typing needed.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-logo" style="font-family: 'Inter', sans-serif; font-weight: 800; letter-spacing: -0.03em;">Shop<span style="color: var(--blue);">Nav</span></div>
+  <p data-i18n="footer_text">Smart shopping for <strong>Kazakhstan</strong> — find any product, compare prices, cook smarter.</p>
+  <div class="footer-links">
+    <a href="search.html" data-i18n="nav_search">Search</a>
+    <a href="cook.html" data-i18n="nav_cook">Cook Mode</a>
+    <a href="stores.html" data-i18n="nav_stores">Stores</a>
+    <a href="cart.html" data-i18n="nav_cart">Cart</a>
+    <a href="onmyway.html" data-i18n="on_my_way_hero_badge">On My Way</a>
+  </div>
+  <p style="margin-top:1rem" data-i18n="footer_disclaimer">Family-friendly marketplace · No alcohol or 18+ products · © 2026 ShopNav</p>
+</footer>
+
+<script src="js/i18n.js"></script>
+<script src="js/data.js"></script>
+<script src="js/scanner.js"></script>
+<script>
+// Set hero city name
+const heroCityEl = document.getElementById('heroCityName');
+function updateHeroCity() {
+  if (heroCityEl) heroCityEl.textContent = t('city_' + getSelectedCity());
+}
+try {
+  updateHeroCity();
+} catch (e) {
+  console.error("Error updating hero city:", e);
+}
+
+// Render categories
+function renderCategories() {
+  const cg = document.getElementById('catsGrid');
+  cg.innerHTML = '';
+  CATEGORIES.forEach(c => {
+    try {
+      cg.innerHTML += `<div class="category-card" onclick="window.location.href='search.html?cat=${c.id}'">
+        <div class="category-card-icon">${c.image ? `<img src="${c.image}" alt="${t(c.name)}">` : c.emoji}</div>
+        <div class="category-card-name">${t(c.name)}</div>
+        <div class="category-card-count">${c.count} ${t('products_plural')}</div>
+      </div>`;
+    } catch (e) {
+      console.error("Error rendering category card:", c, e);
+    }
+  });
+}
+try {
+  renderCategories();
+} catch (e) {
+  console.error("Error rendering categories:", e);
+}
+
+// Render deals (products with price variations as "drops")
+function renderDeals() {
+  const deals = [
+    {p:'p001', drop:12}, {p:'p010', drop:8}, {p:'p024', drop:15},
+    {p:'p013', drop:5}, {p:'p030', drop:10}, {p:'p012', drop:7}
+  ];
+  const dr = document.getElementById('dealsRow');
+  dr.innerHTML = '';
+  deals.forEach(d => {
+    try {
+      const prod = getProductById(d.p);
+      if (!prod) return;
+      const storeId = getCheapestStore(prod);
+      if (!storeId) return; // skip products not available in this city
+      const price = prod.price ? (prod.price[storeId] || 0) : 0;
+      const oldPrice = Math.round(price / (1 - d.drop/100));
+      dr.innerHTML += `<div class="deal-card" onclick="window.location.href='product.html?id=${prod.id}'">
+        <div class="deal-emoji" style="${prod.image ? 'height:2.8rem;display:flex;align-items:center;' : ''}">${prod.image ? `<img src="${prod.image}" style="height:100%;width:auto;object-fit:contain;mix-blend-mode:multiply">` : prod.emoji}</div>
+        <div class="deal-name">${prod.name}</div>
+        <div class="deal-stores">${getStoresForProduct(prod).length} ${t('stores_carry')} ${t('city_' + getSelectedCity())}</div>
+        <div class="deal-price-row">
+          <span class="deal-price">₸${price.toLocaleString()}</span>
+          <span class="deal-old">₸${oldPrice.toLocaleString()}</span>
+          <span class="deal-drop">-${d.drop}%</span>
+        </div>
+      </div>`;
+    } catch (e) {
+      console.error("Error rendering deal product:", d.p, e);
+    }
+  });
+}
+try {
+  renderDeals();
+} catch (e) {
+  console.error("Error rendering deals:", e);
+}
+
+
+// Hero search suggestions
+function onHeroInput(val) {
+  const box = document.getElementById('searchSuggestions');
+  if (val.length < 2) { box.style.display='none'; return; }
+  const results = searchProducts(val).slice(0, 6);
+  if (!results.length) { box.style.display='none'; return; }
+  box.innerHTML = results.map(p =>
+    `<div class="suggestion-item" onclick="window.location.href='search.html?q=${encodeURIComponent(p.name)}'">
+      <span class="suggestion-emoji">${p.image ? `<img src="${p.image}" style="height:1.5rem;width:1.5rem;object-fit:contain;mix-blend-mode:multiply">` : p.emoji}</span>
+      <div><div class="suggestion-name">${p.name}</div><div class="suggestion-cat">${p.brand} · ${t(CATEGORIES.find(c=>c.id===p.category)?.name||'')}</div></div>
+    </div>`
+  ).join('');
+  box.style.display='block';
+}
+
+window.addEventListener('languageChanged', () => {
+  updateHeroCity();
+  renderCategories();
+  renderDeals();
+});
+
+function doSearch() {
+  const q = document.getElementById('heroInput').value.trim();
+  if (q) window.location.href = 'search.html?q=' + encodeURIComponent(q);
+  else window.location.href = 'search.html';
+}
+
+document.addEventListener('click', e => {
+  if (!e.target.closest('#heroSearchBar') && !e.target.closest('#searchSuggestions'))
+    document.getElementById('searchSuggestions').style.display='none';
+});
+
+// Photo search
+function handlePhoto(input) {
+  if (input.files && input.files[0]) {
+    const file = input.files[0];
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const img = new Image();
+      img.onload = function() {
+        // Resize to max 400px
+        const maxDim = 400;
+        let width = img.width;
+        let height = img.height;
+        if (width > maxDim || height > maxDim) {
+          if (width > height) {
+            height = Math.round((height * maxDim) / width);
+            width = maxDim;
+          } else {
+            width = Math.round((width * maxDim) / height);
+            height = maxDim;
+          }
+        }
+        
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+        
+        try {
+          const resizedDataUrl = canvas.toDataURL('image/jpeg', 0.8);
+          sessionStorage.setItem('pending_photo_search_data', resizedDataUrl);
+          sessionStorage.setItem('pending_photo_search_name', file.name);
+          window.location.href = 'search.html?source=photo';
+        } catch (err) {
+          console.error("Failed to save image to sessionStorage", err);
+          // Fallback: just store the name
+          sessionStorage.setItem('pending_photo_search_name', file.name);
+          window.location.href = 'search.html?source=photo';
+        }
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
+}
+
+// QR functionality moved to scanner.js
+
+
+
+// Scroll reveal
+const obs = new IntersectionObserver(entries => entries.forEach(e => { if(e.isIntersecting) e.target.classList.add('visible'); }), {threshold:0.1});
+document.querySelectorAll('.reveal').forEach(el => obs.observe(el));
+
+// Update store count stat for selected city
+document.addEventListener("DOMContentLoaded", () => {
+  try {
+    const storeCountEl = document.getElementById('storeCountStat');
+    if (storeCountEl) storeCountEl.textContent = getStoresForCity().length;
+  } catch (e) {
+    console.error("Error updating store count stat:", e);
+  }
+});
+</script>
+
+<!-- GSAP + Lenis animation system -->
+<script src="js/nav.js"></script>
+</body>
+</html>

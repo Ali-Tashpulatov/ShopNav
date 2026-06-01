@@ -1,0 +1,1338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Cart & Cook Mode — ShopNav</title>
+<link rel="stylesheet" href="css/main.css"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="/socket.io/socket.io.js"></script>
+<style>
+.page-wrap{padding-top:64px;background:var(--cream);min-height:100vh}
+.cart-hero{background: linear-gradient(135deg, var(--forest) 0%, #1a3d1c 100%);padding:3rem 1.5rem;text-align:center;position:relative;overflow:hidden}
+.cart-hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 60% 50% at 50% 100%,rgba(107,74,155,.2),transparent)}
+.cart-hero h1{color:var(--cream);position:relative;z-index:1;margin-bottom:.6rem}
+.cart-hero p{color:rgba(253,248,240,.65);max-width:500px;margin:0 auto 2rem;position:relative;z-index:1}
+.share-code-box{background:rgba(253,248,240,.1);border:1px solid rgba(253,248,240,.2);border-radius:14px;padding:1rem 1.5rem;max-width:400px;margin:0 auto;position:relative;z-index:1;text-align:center}
+.share-code{font-family:'DM Mono',monospace;font-size:1.5rem;font-weight:700;color:var(--accent);letter-spacing:.2em}
+.cart-layout{display:grid;grid-template-columns:minmax(0, 1fr);gap:2rem;max-width:1100px;margin:0 auto;padding:2.5rem 1.5rem}
+@media(min-width:900px){.cart-layout{grid-template-columns:minmax(0, 1fr) 340px}}
+.cart-item{display:flex;align-items:center;gap:1rem;padding:1rem;background:var(--white);border:1px solid var(--sand);border-radius:12px;margin-bottom:.6rem;transition:all .2s ease;cursor:pointer}
+.cart-item:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(5,150,105,0.08);border-color:rgba(5,150,105,0.2)}
+.ci-emoji{font-size:1.8rem;flex-shrink:0}
+.ci-info{flex:1}.ci-name{font-weight:600;font-size:.92rem}.ci-brand{font-size:.78rem;color:var(--muted)}
+.ci-assigned{font-size:.75rem;margin-top:.3rem;display:flex;align-items:center;gap:.4rem}
+.ci-price{font-weight:700;color:var(--forest);white-space:nowrap}
+.ci-remove{background:none;border:none;font-size:1.1rem;cursor:pointer;color:var(--muted);padding:.2rem;transition:color .2s}
+.ci-remove:hover{color:var(--danger)}
+.inline-qty{display:flex;align-items:center;background:var(--sand);border-radius:100px;height:32px;overflow:hidden;flex-shrink:0}
+.inline-qty button{width:32px;background:none;border:none;color:var(--ink);font-weight:700;font-size:1.2rem;cursor:pointer;height:100%;transition:background .2s}
+.inline-qty button:hover{background:rgba(0,0,0,.05)}
+.inline-qty span{min-width:24px;text-align:center;font-weight:600;font-size:.9rem}
+.member-card{background:var(--white);border:1px solid var(--sand);border-radius:14px;padding:1.25rem;margin-bottom:.75rem}
+.member-avatar{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0}
+.empty-cart{text-align:center;padding:4rem 2rem;color:var(--muted);width:100%;box-sizing:border-box}
+.progress-bar{height:6px;background:var(--warm);border-radius:4px;overflow:hidden;margin:.5rem 0}
+.progress-fill{height:100%;border-radius:4px;transition:width .3s}
+.add-item-row{display:flex;gap:.6rem;margin-bottom:1.25rem}
+.household-section{background:var(--white);border:1px solid var(--sand);border-radius:16px;padding:1.25rem}
+.summary-section{background:var(--white);border:1px solid var(--sand);border-radius:16px;padding:1.25rem;margin-top:1rem}
+.summary-row{display:flex;justify-content:space-between;padding:.4rem 0;font-size:.9rem;border-bottom:1px solid var(--light)}
+.summary-row:last-child{border:none;font-weight:700;font-size:1.05rem;color:var(--forest)}
+.payment-options{display:flex;flex-direction:column;gap:.5rem;margin-top:.75rem}
+.payment-option{cursor:pointer;display:block}
+.payment-option input{display:none}
+.payment-box{display:flex;align-items:center;gap:.75rem;padding:.75rem 1rem;border:1px solid var(--sand);border-radius:12px;transition:all .2s;background:var(--white)}
+.payment-option input:checked + .payment-box{border-color:var(--forest);background:rgba(45,74,47,.05);box-shadow:0 0 0 1px var(--forest)}
+.payment-icon{font-size:1.2rem}
+#sharedCartMap {
+  height: 320px;
+  border-radius: 14px;
+  border: 1.5px solid var(--sand);
+  margin-top: 0.75rem;
+  box-shadow: 0 4px 18px rgba(0,0,0,0.03);
+  z-index: 10;
+  position: relative;
+}
+.shared-map-card {
+  background: var(--white);
+  border: 1px solid var(--sand);
+  border-radius: 16px;
+  padding: 1.25rem;
+  margin-bottom: 1.5rem;
+}
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  backdrop-filter: blur(5px);
+  z-index: 99999;
+  display: none;
+  align-items: center;
+  justify-content: center;
+}
+.modal-overlay.open {
+  display: flex;
+}
+.modal-content {
+  background: var(--white);
+  border-radius: 20px;
+  border: 1px solid var(--sand);
+  padding: 2rem;
+  max-width: 420px;
+  width: 90%;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+  text-align: center;
+}
+.modal-header {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--forest);
+  margin-bottom: 0.75rem;
+}
+.modal-body {
+  font-size: 0.9rem;
+  color: var(--muted);
+  margin-bottom: 1.5rem;
+}
+.invite-box {
+  background: var(--warm);
+  border: 1px solid var(--sand);
+  border-radius: 14px;
+  padding: 1rem;
+  margin-top: 1rem;
+  text-align: center;
+}
+.invite-url-text {
+  font-family: monospace;
+  font-size: 0.8rem;
+  background: var(--white);
+  border: 1px solid var(--sand);
+  padding: 0.5rem;
+  border-radius: 8px;
+  word-break: break-all;
+  margin-bottom: 0.5rem;
+  user-select: all;
+}
+.location-control {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--light);
+}
+.location-select {
+  width: 100%;
+  padding: 0.4rem;
+  border-radius: 8px;
+  border: 1px solid var(--sand);
+  font-size: 0.8rem;
+  background: var(--warm);
+  font-weight: 600;
+}
+.split-container {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
+  margin-top: 1rem;
+}
+@media(min-width:768px) {
+  .split-container {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+.split-column {
+  background: var(--white);
+  border: 1.5px solid var(--sand);
+  border-radius: 16px;
+  padding: 1.25rem;
+  box-shadow: 0 4px 12px rgba(5,150,105,0.01);
+}
+.split-column-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  border-bottom: 2px solid var(--warm);
+  padding-bottom: 0.75rem;
+  margin-bottom: 1rem;
+}
+.split-column-title {
+  font-weight: 700;
+  font-size: 1rem;
+  color: var(--forest);
+}
+.assignment-badge {
+  background: rgba(5,150,105,0.08);
+  color: var(--forest);
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  display: inline-block;
+  margin-top: 0.25rem;
+}
+.assignment-reason-text {
+  font-size: 0.75rem;
+  color: var(--muted);
+  background: var(--cream);
+  padding: 0.4rem 0.6rem;
+  border-radius: 8px;
+  margin-top: 0.5rem;
+  line-height: 1.3;
+}
+.member-actions {
+  font-size: 0.75rem;
+  color: var(--forest);
+  cursor: pointer;
+  text-decoration: underline;
+}
+.member-actions:hover {
+  color: var(--accent);
+}
+.user-tooltip {
+  background: var(--forest) !important;
+  border: 1px solid var(--forest) !important;
+  color: #fff !important;
+  font-weight: 700 !important;
+  border-radius: 8px !important;
+  font-size: 0.75rem !important;
+  padding: 4px 8px !important;
+}
+.custom-store-marker, .custom-user-marker {
+  background: none !important;
+  border: none !important;
+}
+</style>
+</head>
+<body>
+<nav class="navbar">
+  <a href="index.html" class="navbar-logo">
+    <span class="logo-icon">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
+        <line x1="3" y1="6" x2="21" y2="6"></line>
+        <path d="M16 10a4 4 0 0 1-8 0"></path>
+      </svg>
+    </span>
+    ShopNav<div class="logo-dot"></div>
+  </a>
+  <div class="navbar-links">
+    <a href="index.html" data-i18n="nav_home">Home</a><a href="search.html" data-i18n="nav_search">Search</a>
+    <a href="cook.html" data-i18n="nav_cook">Cook Mode</a><a href="stores.html" data-i18n="nav_stores">Stores</a><a href="cart.html" class="active" data-i18n="nav_cart">Cart</a>
+    <a href="order-history.html">📋 Orders</a>
+  </div>
+  <div class="navbar-actions"><a href="#">❤️</a><a href="#">👤</a></div>
+  <div class="navbar-burger" onclick="toggleMenu()">☰</div>
+</nav>
+<!-- Name Selector Modal Overlay -->
+<div class="modal-overlay" id="nameModal">
+  <div class="modal-content">
+    <div class="modal-header" data-i18n="set_name_title">Welcome to Shared Cart</div>
+    <div class="modal-body" data-i18n="set_name_prompt">Enter your name to join the shared cart:</div>
+    <input type="text" class="input w-full" id="userNameInput" placeholder="Your name (e.g. Ali)" style="margin-bottom:1.25rem" onkeydown="if(event.key==='Enter')saveUserName()"/>
+    <button class="btn btn-primary w-full" onclick="saveUserName()" data-i18n="save_btn">Save</button>
+  </div>
+</div>
+
+<div class="page-wrap">
+  <div class="cart-hero">
+    <div class="hero-dots"></div>
+    <div class="hero-badge" style="margin-bottom:1.5rem">🛒 <span data-i18n="cart_hero_badge">Shared Cart</span></div>
+    <h1 data-i18n="cart_hero_title">Shop Together,<br>Save Time</h1>
+    <p data-i18n="cart_hero_desc">Share your cart with household members. Each person sees which items are closest to them — split the trip.</p>
+    <div class="share-code-box" style="display:none">
+      <div style="font-size:.78rem;color:rgba(253,248,240,.6);margin-bottom:.4rem;letter-spacing:.1em;text-transform:uppercase" data-i18n="cart_code_label">Your Cart Code</div>
+      <div class="share-code" id="cartCode">FF-7K2P</div>
+      <button class="btn btn-ghost btn-sm" style="margin-top:.75rem;color:var(--cream);border-color:rgba(253,248,240,.3);background:rgba(253,248,240,.1)" onclick="shareCart()">📤 <span data-i18n="cart_share_btn">Share with household</span></button>
+    </div>
+  </div>
+
+  <div class="cart-layout">
+    <!-- MAIN CART -->
+    <main>
+      <div class="flex-between" style="margin-bottom:1.25rem;flex-wrap:wrap;gap:.75rem">
+        <div><div class="section-tag" data-i18n="nav_cart">Your Cart</div><h2 id="cartTitle" style="font-size:1.5rem">Shopping List</h2></div>
+        <div style="display:flex;gap:.6rem">
+          <button class="btn btn-ghost btn-sm" onclick="clearCart()">🗑 <span data-i18n="clear_btn">Clear</span></button>
+          <a href="search.html" class="btn btn-primary btn-sm" data-i18n="add_products">+ Add Products</a>
+        </div>
+      </div>
+      <!-- Add manual item -->
+      <div class="add-item-row">
+        <input class="input" id="manualItem" data-i18n-placeholder="what_do_you_need_ph" placeholder="Add item manually (e.g. Milk, Eggs…)" style="flex:1" onkeydown="if(event.key==='Enter')addManual()"/>
+        <button class="btn btn-primary btn-sm" onclick="addManual()" data-i18n="add_btn">Add</button>
+      </div>
+
+      <!-- Live Shared Map -->
+      <div class="shared-map-card" id="mapCard">
+        <div style="font-weight:700;margin-bottom:0.75rem;display:flex;align-items:center;justify-content:space-between;width:100%">
+          <span data-i18n="shared_map_title">🗺️ Live Shared Map</span>
+          <span id="syncStatus" style="font-size:0.75rem;color:var(--muted);font-weight:600">🟡 Connecting...</span>
+        </div>
+        <div id="sharedCartMap"></div>
+      </div>
+
+      <div id="cartList"></div>
+      
+      <div style="margin-top:1.5rem">
+        <div style="font-size:.88rem;color:var(--muted);margin-bottom:.75rem">🔗 <span data-i18n="import_from_cook_label">Or import from Cook Mode:</span></div>
+        <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+          <button class="btn btn-ghost btn-sm" onclick="importRecipe('borscht')" data-i18n="import_borscht">🍲 Import Borscht</button>
+          <button class="btn btn-ghost btn-sm" onclick="importRecipe('plov')" data-i18n="import_plov">🍛 Import Plov</button>
+          <button class="btn btn-ghost btn-sm" onclick="importRecipe('fried-eggs')" data-i18n="import_eggs">🍳 Import Fried Eggs</button>
+        </div>
+      </div>
+    </main>
+
+    <!-- SIDEBAR -->
+    <aside>
+      <div class="household-section">
+        <div style="font-weight:700;margin-bottom:1rem">👥 <span data-i18n="household_members_title">Household Members</span></div>
+        <div id="members"></div>
+      </div>
+
+      <!-- Invite Friend Section -->
+      <div class="summary-section" style="margin-top:1rem">
+        <div style="font-weight:700;margin-bottom:.5rem">🔗 <span data-i18n="invite_friend_title">Invite a Friend</span></div>
+        <p style="font-size:0.75rem;color:var(--muted);margin-bottom:0.75rem" data-i18n="invite_friend_desc">Send this link to a friend to shop together in real time.</p>
+        <div class="invite-box" style="margin-top:0">
+          <div class="invite-url-text" id="inviteUrlText">...</div>
+          <button class="btn btn-primary btn-sm w-full" onclick="copyInviteLink()" data-i18n="copy_link_btn">Copy Invite Link</button>
+        </div>
+      </div>
+
+      <div class="summary-section">
+        <div style="font-weight:700;margin-bottom:.75rem">🧮 <span data-i18n="cart_summary_title">Cart Summary</span></div>
+        <div id="summaryRows"></div>
+      </div>
+      <div class="summary-section" style="margin-top:1rem">
+        <div style="font-weight:700;margin-bottom:.75rem">💳 <span data-i18n="payment_method_title">Payment Method</span></div>
+        <div class="payment-options">
+          <label class="payment-option">
+            <input type="radio" name="payment" value="Cash" checked>
+            <div class="payment-box">
+              <span class="payment-icon">💵</span>
+              <span data-i18n="payment_cash">Cash</span>
+            </div>
+          </label>
+          <label class="payment-option">
+            <input type="radio" name="payment" value="Card">
+            <div class="payment-box">
+              <span class="payment-icon">💳</span>
+              <span data-i18n="payment_card">Card</span>
+            </div>
+          </label>
+          <label class="payment-option">
+            <input type="radio" name="payment" value="Kaspi">
+            <div class="payment-box">
+              <span class="payment-icon">🇰🇿</span>
+              <span data-i18n="payment_kaspi">Kaspi</span>
+            </div>
+          </label>
+        </div>
+      </div>
+      <button class="btn btn-accent w-full" style="margin-top:1rem" onclick="checkout()" data-i18n="checkout_btn">Checkout</button>
+      <button class="btn btn-primary w-full" style="margin-top:.75rem" onclick="optimizeCart()" data-i18n="optimize_btn">Optimize & Assign</button>
+    </aside>
+  </div>
+</div>
+
+<script src="js/i18n.js"></script>
+<script src="js/data.js"></script>
+<script src="js/cart-api.js"></script>
+<script>
+let cart=JSON.parse(localStorage.getItem('ff_cart')||'[]');
+let cartId = getCartIdFromURL() || getSavedCartId() || null; // will be set after server call
+let myName = localStorage.getItem('ff_user_name') || '';
+let myLocation = {
+  lat: parseFloat(localStorage.getItem('ff_my_lat')) || 43.238,
+  lng: parseFloat(localStorage.getItem('ff_my_lng')) || 76.945,
+  name: localStorage.getItem('ff_my_loc_name') || 'Medeu (Home)'
+};
+let isTrackingGPS = localStorage.getItem('ff_gps_track') === 'true';
+let isOptimized = false;
+
+let members = [
+  { name: myName || 'Me', emoji: '🧑', lat: myLocation.lat, lng: myLocation.lng, locationName: myLocation.name, isMe: true, items: [] }
+];
+
+// Socket.IO instance (shared globally for checkout.html too)
+let socket = null;
+window._socket = null;
+
+const LOCATION_PRESETS = {
+  almaty: [
+    { name: 'Medeu (Home)', lat: 43.238, lng: 76.945 },
+    { name: 'Near Small (Seifullina)', lat: 43.235, lng: 76.952 },
+    { name: 'Abay Avenue Office', lat: 43.242, lng: 76.930 },
+    { name: 'Dostyk Plaza Area', lat: 43.232, lng: 76.955 },
+    { name: 'Abay & Rozybakiev', lat: 43.230, lng: 76.915 }
+  ],
+  shymkent: [
+    { name: 'Republic Ave Home', lat: 42.315, lng: 69.590 },
+    { name: 'Zhibek Zholy Area', lat: 42.320, lng: 69.600 },
+    { name: 'Kunayev St Office', lat: 42.322, lng: 69.585 }
+  ],
+  turkestan: [
+    { name: 'Tauke Khan Ave Home', lat: 43.300, lng: 68.270 },
+    { name: 'B. Sattarkhanov Area', lat: 43.295, lng: 68.265 },
+    { name: 'Yassawi St Office', lat: 43.305, lng: 68.260 }
+  ]
+};
+
+function getCartIdFromURL() {
+  const params = new URLSearchParams(window.location.search);
+  // Support both ?cartId= (server redirect) and ?joinCart= (legacy)
+  return params.get('cartId') || params.get('joinCart') || null;
+}
+function getSavedCartId() {
+  return localStorage.getItem('ff_shared_cart_id');
+}
+function generateCartId() {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let code = 'SC-';
+  for (let i = 0; i < 6; i++) {
+    code += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  localStorage.setItem('ff_shared_cart_id', code);
+  return code;
+}
+
+function saveCart(){
+  localStorage.setItem('ff_cart', JSON.stringify(cart));
+}
+
+async function persistCartToServer() {
+  if (!cartId) return;
+  try {
+    await apiUpdateCartItems(cartId, cart);
+  } catch(e) { console.warn('Cart persist failed:', e.message); }
+}
+
+function updateQty(i, delta){
+  cart[i].quantity = (cart[i].quantity || 1) + delta;
+  if(cart[i].quantity <= 0) cart.splice(i, 1);
+  isOptimized = false;
+  saveCart();
+  persistCartToServer();
+  renderCart();
+  broadcastCartUpdate();
+}
+
+function removeItem(i){
+  cart.splice(i, 1);
+  isOptimized = false;
+  saveCart();
+  persistCartToServer();
+  renderCart();
+  broadcastCartUpdate();
+}
+
+function changeItemStore(i, storeId){
+  if(storeId) cart[i].storeId = storeId;
+  else delete cart[i].storeId;
+  isOptimized = false;
+  saveCart();
+  persistCartToServer();
+  renderCart();
+  broadcastCartUpdate();
+}
+
+function clearCart(){
+  if(confirm(t('confirm_clear_cart'))){
+    cart=[];
+    isOptimized = false;
+    saveCart();
+    persistCartToServer();
+    renderCart();
+    broadcastCartUpdate();
+  }
+}
+
+function addManual(){
+  const val=document.getElementById('manualItem').value.trim();
+  if(!val)return;
+  const match=searchProducts(val)[0];
+  if(match)cart.push({id:match.id,name:match.name,emoji:match.emoji,quantity:1});
+  else cart.push({id:null,name:val,emoji:'📦',quantity:1});
+  isOptimized = false;
+  saveCart();
+  persistCartToServer();
+  renderCart();
+  broadcastCartUpdate();
+  document.getElementById('manualItem').value='';
+}
+
+function importRecipe(id){
+  const recipe=RECIPES.find(r=>r.id===id);
+  if(!recipe)return;
+  recipe.ingredients.forEach(pid=>{
+    const p=getProductById(pid);
+    if(p){
+      const existing = cart.find(i=>i.id===p.id);
+      if(existing) existing.quantity = (existing.quantity || 1) + 1;
+      else cart.push({id:p.id,name:p.name,emoji:p.emoji,quantity:1});
+    }
+  });
+  isOptimized = false;
+  saveCart();
+  persistCartToServer();
+  renderCart();
+  broadcastCartUpdate();
+}
+
+// Haversine Distance
+function getHaversineDistance(lat1, lon1, lat2, lon2) {
+  const R = 6371; // Radius of the earth in km
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = 
+    Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+    Math.sin(dLon/2) * Math.sin(dLon/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  const d = R * c; // Distance in km
+  return d;
+}
+
+// Local optimization assignment logic
+function runOptimizationLocally(shouldBroadcast) {
+  members.forEach(m => m.items = []);
+  
+  cart.forEach(item => {
+    const prod = getProductById(item.id);
+    if (!prod) {
+      item.assignedTo = myName || 'Me';
+      item.assignedStore = t('manual_item');
+      item.assignedStoreId = null;
+      item.assignedDist = 0;
+      item.assignedReason = "Manual item assigned to the active user.";
+      const member = members.find(m => m.name === (myName || 'Me'));
+      if (member) member.items.push(item.name);
+      return;
+    }
+    
+    const cityStores = getStoresForCity();
+    let bestDist = Infinity;
+    let bestMember = members[0].name;
+    let bestStore = null;
+    let assignmentDetails = [];
+    
+    members.forEach(member => {
+      let shortestStoreDist = Infinity;
+      let closestStoreForMember = null;
+      
+      cityStores.forEach(store => {
+        const price = prod.price[store.id] || 0;
+        const inStock = prod.stock[store.id] !== 'out';
+        
+        if (price > 0 && inStock) {
+          const dist = getHaversineDistance(member.lat, member.lng, store.lat, store.lng);
+          if (dist < shortestStoreDist) {
+            shortestStoreDist = dist;
+            closestStoreForMember = store;
+          }
+        }
+      });
+      
+      assignmentDetails.push({
+        memberName: member.name,
+        store: closestStoreForMember,
+        dist: shortestStoreDist
+      });
+      
+      if (shortestStoreDist < bestDist) {
+        bestDist = shortestStoreDist;
+        bestMember = member.name;
+        bestStore = closestStoreForMember;
+      }
+    });
+    
+    item.assignedTo = bestMember;
+    item.assignedStore = bestStore ? bestStore.name : t('not_available');
+    item.assignedStoreId = bestStore ? bestStore.id : null;
+    item.assignedDist = bestDist === Infinity ? 0 : parseFloat(bestDist.toFixed(2));
+    
+    let reasonText = "";
+    if (bestStore) {
+      const otherDetails = assignmentDetails.filter(d => d.memberName !== bestMember);
+      reasonText = t('assignment_reason')
+        .replace('{name}', bestMember)
+        .replace('{store}', bestStore.emoji + ' ' + bestStore.name)
+        .replace('{dist}', item.assignedDist);
+      if (otherDetails.length > 0 && otherDetails[0].store) {
+        reasonText += ` (Compare: ${otherDetails[0].memberName} is ${otherDetails[0].dist.toFixed(2)} km to ${otherDetails[0].store.emoji} ${otherDetails[0].store.name})`;
+      }
+    } else {
+      reasonText = "No stores carry this product in this city.";
+    }
+    
+    item.assignedReason = reasonText;
+    
+    const memberObj = members.find(m => m.name === bestMember);
+    if (memberObj) {
+      memberObj.items = memberObj.items || [];
+      memberObj.items.push(item.name);
+    }
+  });
+  
+  isOptimized = true;
+  saveCart();
+  persistCartToServer();
+  
+  if (shouldBroadcast && socket && cartId) {
+    socket.emit('optimize-updated', {
+      cartId,
+      cart,
+      isOptimized,
+      members: members.map(m => ({ name: m.name, items: m.items }))
+    });
+  }
+  
+  renderCart();
+  renderMembers();
+  updateMap();
+}
+
+function optimizeCart() {
+  if (!cart.length) {
+    alert(t('add_items_first_alert'));
+    return;
+  }
+  if (members.length < 2) {
+    alert("Invite a friend first to optimize and split the cart between two members!");
+    return;
+  }
+  
+  runOptimizationLocally(true);
+}
+
+function deoptimizeCart() {
+  isOptimized = false;
+  cart.forEach(item => {
+    delete item.assignedTo;
+    delete item.assignedStore;
+    delete item.assignedStoreId;
+    delete item.assignedDist;
+    delete item.assignedReason;
+  });
+  members.forEach(m => m.items = []);
+  
+  saveCart();
+  persistCartToServer();
+  
+  if (socket && cartId) {
+    socket.emit('optimize-updated', {
+      cartId,
+      cart,
+      isOptimized,
+      members: members.map(m => ({ name: m.name, items: [] }))
+    });
+  }
+  
+  renderCart();
+  renderMembers();
+  updateMap();
+}
+
+function renderCart(){
+  const list=document.getElementById('cartList');
+  document.getElementById('cartTitle').textContent=`${t('cart_title_prefix')} (${cart.length})`;
+  if(!cart.length){
+    const history = getPurchaseHistory();
+    let historyHTML = '';
+    if (history && history.length > 0) {
+      historyHTML = `
+        <div style="margin-top: 2.5rem; border-top: 1px solid var(--sand); padding-top: 2rem; text-align: left;">
+          <h3 style="font-size: 1.1rem; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem; color: var(--forest);">
+            🔄 <span>${t('buy_again_title')}</span>
+          </h3>
+          <p style="font-size: 0.85rem; color: var(--muted); margin-bottom: 1.25rem;">
+            ${t('buy_again_desc')}
+          </p>
+          <div style="display: flex; gap: 1rem; overflow-x: auto; padding-bottom: 1rem; scrollbar-width: none;">
+            ${history.map(order => {
+              let totalPrice = 0;
+              order.items.forEach(item => {
+                const prod = getProductById(item.id);
+                const qty = item.quantity || 1;
+                if (prod) {
+                  const storeId = getCheapestStore(prod);
+                  if (storeId) totalPrice += (prod.price[storeId] || 0) * qty;
+                }
+              });
+
+              const previews = order.items.map(item => {
+                const prod = getProductById(item.id);
+                if (prod && prod.image) {
+                  return `<div style="width: 28px; height: 28px; background: var(--white); border: 1px solid var(--sand); border-radius: 6px; display: flex; align-items: center; justify-content: center; overflow: hidden; padding: 1px;" title="${item.name} x${item.quantity}">
+                    <img src="${prod.image}" style="max-height: 100%; max-width: 100%; object-fit: contain;">
+                  </div>`;
+                }
+                return `<div style="width: 28px; height: 28px; background: var(--white); border: 1px solid var(--sand); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 0.9rem;" title="${item.name} x${item.quantity}">
+                  ${item.emoji || '📦'}
+                </div>`;
+              }).slice(0, 4).join('') + (order.items.length > 4 ? `<div style="width: 28px; height: 28px; background: var(--sand); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: 700; color: var(--muted);">+${order.items.length - 4}</div>` : '');
+
+              const formattedDate = new Date(order.date).toLocaleDateString(
+                typeof currentLang !== 'undefined' ? currentLang : 'en', 
+                { month: 'short', day: 'numeric' }
+              );
+              
+              const orderName = t('order_date_label').replace('{date}', formattedDate);
+
+              return `
+                <div class="card card-padded" style="min-width: 240px; flex-shrink: 0; background: var(--white); border: 1px solid var(--sand); border-radius: 12px; display: flex; flex-direction: column; justify-content: space-between; padding: 1rem; box-shadow: 0 4px 12px rgba(0,0,0,0.01);">
+                  <div>
+                    <div style="font-weight: 700; font-size: 0.85rem; color: var(--forest); margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.25rem;">
+                      <span>🛍️</span> <span>${orderName}</span>
+                    </div>
+                    <div style="display: flex; gap: 0.35rem; flex-wrap: wrap; margin-bottom: 0.75rem; align-items: center;">
+                      ${previews}
+                    </div>
+                  </div>
+                  <div style="display: flex; align-items: center; justify-content: space-between; border-top: 1px dashed var(--sand); padding-top: 0.5rem; margin-top: 0.5rem;">
+                    <span style="font-weight: 700; font-size: 0.9rem; color: var(--forest);">₸${totalPrice.toLocaleString()}</span>
+                    <button class="btn btn-primary btn-sm" onclick="handleBuyAgain('${order.id}')" style="padding: 0.3rem 0.7rem; font-size: 0.75rem; border-radius: 100px; height: 26px;">
+                      🔄 ${t('buy_again_btn')}
+                    </button>
+                  </div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        </div>
+      `;
+    }
+
+    list.innerHTML=`<div class="empty-cart"><div style="font-size:3rem;margin-bottom:.75rem">🛒</div><h3 style="margin-bottom:.5rem">${t('cart_empty')}</h3><p>${t('cart_empty_sub')}</p><a href="search.html" class="btn btn-primary" style="margin-top:1rem; margin-bottom: 1rem;" data-i18n="browse_products">${t('browse_products')}</a>${historyHTML}</div>`;
+    renderSummary();return;
+  }
+
+  // Display visually split cart lists if optimized and multiple members exist
+  if (isOptimized && members.length >= 2) {
+    const columnsHTML = members.map(member => {
+      const memberItems = cart.filter(item => item.assignedTo === member.name);
+      
+      const itemsListHTML = memberItems.map((item, i) => {
+        const prod = getProductById(item.id);
+        const bestId = prod ? getCheapestStore(prod) : null;
+        const price = bestId ? prod.price[bestId] : 0;
+        const store = bestId ? getStoreById(bestId) : null;
+        
+        return `<div class="cart-item" style="border-left: 4px solid ${member.name === myName ? 'var(--forest)' : '#F2A03B'}; padding-left: 0.75rem; margin-bottom: 0.5rem;">
+          <span class="ci-emoji" style="display:flex;align-items:center;justify-content:center;width:2.2rem;height:2.2rem">${prod && prod.image ? `<img src="${prod.image}" style="max-height:100%;max-width:100%;mix-blend-mode:multiply">` : (item.emoji||'📦')}</span>
+          <div class="ci-info">
+            <div class="ci-name" style="font-size:0.85rem">${item.name}</div>
+            <div class="ci-brand" style="margin-top:0.2rem">
+              <span class="assignment-badge">📍 ${item.assignedStore} · ${item.assignedDist} km</span>
+              <div class="assignment-reason-text">${item.assignedReason}</div>
+            </div>
+          </div>
+          ${price ? `<div class="ci-price" style="font-size:0.85rem">₸${(price * (item.quantity||1)).toLocaleString()}</div>` : ''}
+          <div class="inline-qty" style="margin-left:.5rem">
+            <span style="padding: 0 8px; font-weight:700; font-size:0.8rem">x${item.quantity||1}</span>
+          </div>
+        </div>`;
+      }).join('');
+      
+      return `
+        <div class="split-column">
+          <div class="split-column-header">
+            <div class="member-avatar" style="background:${member.name === myName ? 'var(--forest)' : '#F2A03B'}; color:#fff; width:32px; height:32px; font-size: 1rem; border-radius:50%; display:flex; align-items:center; justify-content:center">${member.emoji || '👤'}</div>
+            <div>
+              <div class="split-column-title" style="font-size:0.9rem">${t('split_cart_title').replace('{name}', member.name)}</div>
+              <div style="font-size:0.7rem;color:var(--muted)">${memberItems.length} items assigned</div>
+            </div>
+          </div>
+          ${memberItems.length === 0 ? `<div style="padding:1.5rem;text-align:center;color:var(--muted);font-size:0.8rem">No items assigned</div>` : itemsListHTML}
+        </div>
+      `;
+    }).join('');
+    
+    list.innerHTML = `
+      <div class="split-container">${columnsHTML}</div>
+      <div style="margin-top:1.5rem;text-align:center">
+        <button class="btn btn-ghost btn-sm" onclick="deoptimizeCart()">🔓 Reset Assignments</button>
+      </div>`;
+    renderSummary();
+    return;
+  }
+
+  // Unified Cart Rendering
+  list.innerHTML=cart.map((item,i)=>{
+    const prod=getProductById(item.id);
+    const targetStoreId = item.storeId || (prod ? getCheapestStore(prod) : null);
+    const price = targetStoreId && prod ? prod.price[targetStoreId] : 0;
+    const store = targetStoreId ? getStoreById(targetStoreId) : null;
+    const assigned = item.assignedTo || null;
+    
+    let storeDropdown = '';
+    if (prod) {
+      const storesForProd = getStoresForProduct(prod);
+      storeDropdown = `<select onchange="changeItemStore(${i}, this.value)" style="border:1px solid var(--sand);background:var(--cream);border-radius:6px;padding:2px 4px;font-size:0.75rem;margin-top:0.2rem;max-width:200px;">
+        <option value="">${t('cheapest_auto') || 'Auto (Cheapest)'}</option>
+        ${storesForProd.map(s => `<option value="${s.id}" ${(targetStoreId === s.id && item.storeId) ? 'selected="selected"' : ''}>${s.emoji} ${s.name} (₸${prod.price[s.id]})</option>`).join('')}
+      </select>`;
+    }
+
+    return `<div class="cart-item" id="ci_${i}">
+      <span class="ci-emoji" style="display:flex;align-items:center;justify-content:center;width:2.5rem;height:2.5rem">${prod && prod.image ? `<img src="${prod.image}" style="max-height:100%;max-width:100%;mix-blend-mode:multiply">` : (item.emoji||'📦')}</span>
+      <div class="ci-info">
+        <div class="ci-name">${item.name}</div>
+        ${store?`<div class="ci-brand">${item.storeId ? '📍 Selected:' : (t('cheapest_badge')+':')} ${store.emoji} ${store.name} · ${store.distance} ${t('km_away')}</div>`:`<div class="ci-brand">${t('manual_item')}</div>`}
+        ${storeDropdown}
+        ${assigned?`<div class="ci-assigned"><span>${members.find(m=>m.name===assigned)?.emoji||'👤'}</span><span style="color:var(--forest);font-weight:500">${t('assigned_to_label').replace('{name}', assigned)}</span></div>`:`<div class="ci-assigned" style="color:var(--muted)">${t('unassigned_label')}</div>`}
+      </div>
+      ${price?`<div class="ci-price">₸${(price * (item.quantity||1)).toLocaleString()}</div>`:''}
+      <div class="inline-qty" style="margin-left:.5rem">
+        <button onclick="updateQty(${i}, -1)">-</button>
+        <span>${item.quantity||1}</span>
+        <button onclick="updateQty(${i}, 1)">+</button>
+      </div>
+      <button class="ci-remove" onclick="removeItem(${i})" title="Remove">🗑</button>
+    </div>`;
+  }).join('');
+  renderSummary();
+}
+
+function renderMembers() {
+  const el = document.getElementById('members');
+  if (!el) return;
+  
+  const currentCity = getSelectedCity();
+  const presets = LOCATION_PRESETS[currentCity] || LOCATION_PRESETS['almaty'];
+  
+  el.innerHTML = members.map((m, index) => {
+    const isMe = m.name === myName;
+    const locText = m.locationName || 'Location unknown';
+    
+    let controlHTML = '';
+    if (isMe) {
+      const options = presets.map(p => {
+        const selected = Math.abs(p.lat - m.lat) < 0.0001 && Math.abs(p.lng - m.lng) < 0.0001 ? 'selected' : '';
+        return `<option value="${p.lat},${p.lng}" ${selected}>${p.name}</option>`;
+      }).join('');
+      
+      controlHTML = `
+        <div class="location-control">
+          <select class="location-select" onchange="changeMyPresetLocation(this.value)">
+            ${options}
+          </select>
+          <label style="display:flex;align-items:center;gap:6px;font-size:0.75rem;color:var(--muted);cursor:pointer;margin-top:0.25rem">
+            <input type="checkbox" id="gpsTrackCheck" ${isTrackingGPS ? 'checked' : ''} onchange="toggleGPSTracking(this.checked)"/>
+            <span>${t('gps_track_label')}</span>
+          </label>
+        </div>
+      `;
+    }
+    
+    return `
+      <div class="member-card" style="border-left: 3px solid ${isMe ? 'var(--forest)' : '#F2A03B'}">
+        <div style="display:flex;align-items:center;gap:.75rem;margin-bottom:.5rem;justify-content:space-between">
+          <div style="display:flex;align-items:center;gap:.75rem">
+            <div class="member-avatar" style="background:${isMe ? 'var(--forest)' : '#F2A03B'}; color:#fff; width:36px; height:36px; font-size:1.1rem; border-radius:50%; display:flex; align-items:center; justify-content:center">${m.emoji || '👤'}</div>
+            <div>
+              <div style="font-weight:600;font-size:.9rem;display:flex;align-items:center;gap:4px">
+                <span>${m.name}</span>
+                <span style="font-size:0.7rem;color:var(--muted)">(${isMe ? t('user_identity_me') : t('user_identity_friend')})</span>
+              </div>
+              <div style="font-size:.75rem;color:var(--muted)">📍 ${locText}</div>
+            </div>
+          </div>
+          ${isMe ? `<span class="member-actions" onclick="editMyName()">✏️</span>` : ''}
+        </div>
+        ${controlHTML}
+        <div style="font-size:.75rem;color:var(--muted);margin-top:0.5rem;border-top:1px dashed var(--light);padding-top:0.4rem">
+          ${m.items && m.items.length ? `🛒 ${m.items.join(', ')}` : t('no_items_assigned')}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function changeMyPresetLocation(value) {
+  const parts = value.split(',');
+  const lat = parseFloat(parts[0]);
+  const lng = parseFloat(parts[1]);
+  
+  if (isTrackingGPS) {
+    document.getElementById('gpsTrackCheck').checked = false;
+    toggleGPSTracking(false);
+  }
+  
+  const currentCity = getSelectedCity();
+  const presets = LOCATION_PRESETS[currentCity] || LOCATION_PRESETS['almaty'];
+  const preset = presets.find(p => Math.abs(p.lat - lat) < 0.0001 && Math.abs(p.lng - lng) < 0.0001);
+  const name = preset ? preset.name : 'Custom Preset';
+  
+  members[0].lat = lat;
+  members[0].lng = lng;
+  members[0].locationName = name;
+  
+  myLocation = { lat: lat, lng: lng, name: name };
+  localStorage.setItem('ff_my_lat', lat);
+  localStorage.setItem('ff_my_lng', lng);
+  localStorage.setItem('ff_my_loc_name', name);
+  
+  broadcastMemberUpdate();
+  renderMembers();
+  updateMap();
+  
+  if (isOptimized) {
+    runOptimizationLocally(true);
+  }
+}
+
+let watchId = null;
+function toggleGPSTracking(enable) {
+  if (!enable) {
+    if (watchId !== null) {
+      navigator.geolocation.clearWatch(watchId);
+      watchId = null;
+    }
+    localStorage.setItem('ff_gps_track', 'false');
+    isTrackingGPS = false;
+    return;
+  }
+  
+  if (!navigator.geolocation) {
+    alert("Geolocation is not supported by your browser.");
+    document.getElementById('gpsTrackCheck').checked = false;
+    return;
+  }
+  
+  isTrackingGPS = true;
+  localStorage.setItem('ff_gps_track', 'true');
+  
+  watchId = navigator.geolocation.watchPosition(
+    position => {
+      const lat = position.coords.latitude;
+      const lng = position.coords.longitude;
+      
+      members[0].lat = lat;
+      members[0].lng = lng;
+      members[0].locationName = "GPS Location";
+      
+      myLocation = { lat: lat, lng: lng, name: "GPS Location" };
+      localStorage.setItem('ff_my_lat', lat);
+      localStorage.setItem('ff_my_lng', lng);
+      localStorage.setItem('ff_my_loc_name', "GPS Location");
+      
+      broadcastMemberUpdate();
+      renderMembers();
+      updateMap();
+      
+      if (isOptimized) {
+        runOptimizationLocally(true);
+      }
+    },
+    error => {
+      console.warn("GPS tracking error:", error);
+    },
+    { enableHighAccuracy: true, maximumAge: 10000, timeout: 5000 }
+  );
+}
+
+function renderSummary(){
+  const rows=document.getElementById('summaryRows');
+  let total=0;
+  let itemCount=0;
+  cart.forEach(item=>{
+    const qty = item.quantity || 1;
+    itemCount += qty;
+    const prod=getProductById(item.id);
+    if(prod){
+      const bid = item.storeId || getCheapestStore(prod);
+      if(bid) total+=(prod.price[bid] * qty);
+    }
+  });
+  rows.innerHTML=`
+    <div class="summary-row"><span>${t('cart_summary_items')}</span><span>${itemCount}</span></div>
+    <div class="summary-row"><span>${t('cart_summary_members')}</span><span>${members.length}</span></div>
+    <div class="summary-row"><span>${t('cart_summary_total')}</span><span>₸${total.toLocaleString()}</span></div>`;
+}
+
+function handleBuyAgain(orderId) {
+  const success = readdBasketToCart(orderId);
+  if (success) {
+    cart = JSON.parse(localStorage.getItem('ff_cart') || '[]');
+    isOptimized = false;
+    renderCart();
+    broadcastCartUpdate();
+    showToast(t('buy_again_success'));
+  }
+}
+
+function checkout(){
+  if(!cart.length){alert(t('cart_empty'));return;}
+  // Navigate to the checkout wizard
+  window.location.href = `checkout.html?cartId=${encodeURIComponent(cartId)}`;
+}
+
+// Invite friend features
+function copyInviteLink() {
+  const url = document.getElementById('inviteUrlText').textContent;
+  navigator.clipboard.writeText(url).then(() => {
+    showToast(t('cart_link_copied'));
+  });
+}
+
+function updateInviteUrl() {
+  const urlText = document.getElementById('inviteUrlText');
+  if (urlText && cartId) {
+    // Always use the current HTTP origin (server is running)
+    const inviteUrl = `${window.location.origin}/cart/${encodeURIComponent(cartId)}`;
+    urlText.textContent = inviteUrl;
+  }
+}
+
+// User Name selection functions
+function saveUserName() {
+  const input = document.getElementById('userNameInput').value.trim();
+  if (!input) return;
+  
+  const oldName = myName;
+  myName = input;
+  localStorage.setItem('ff_user_name', myName);
+  document.getElementById('nameModal').classList.remove('open');
+  
+  members[0].name = myName;
+  
+  initConnection();
+  broadcastMemberUpdate(oldName);
+  updateInviteUrl();
+  renderCart();
+  renderMembers();
+  updateMap();
+}
+
+function editMyName() {
+  document.getElementById('userNameInput').value = myName;
+  document.getElementById('nameModal').classList.add('open');
+}
+
+// ── Real-Time: Socket.IO ───────────────────────────────────
+function initConnection() {
+  if (socket) socket.disconnect();
+
+  socket = io(window.location.origin);
+  window._socket = socket;
+
+  socket.on('connect', () => {
+    console.log('[Socket] Connected:', socket.id);
+    document.getElementById('syncStatus').textContent = `🟢 Live · ${cartId}`;
+
+    // Join the cart room on the server
+    socket.emit('join-cart', {
+      cartId,
+      member: {
+        name: myName || 'Me',
+        emoji: members[0].emoji || '🧑',
+        lat: members[0].lat,
+        lng: members[0].lng,
+        locationName: members[0].locationName
+      }
+    });
+  });
+
+  socket.on('disconnect', () => {
+    document.getElementById('syncStatus').textContent = '🔴 Disconnected';
+  });
+
+  // Server sends current cart state when we first join
+  socket.on('cart-synced', ({ cart: serverCart }) => {
+    if (serverCart && serverCart.items) {
+      // Merge: use server cart if it has more items, else keep local
+      if (serverCart.items.length >= cart.length) {
+        cart = serverCart.items;
+        saveCart();
+      }
+      // Also load existing members from server
+      if (serverCart.members && serverCart.members.length > 0) {
+        serverCart.members.forEach(m => {
+          if (m.name !== myName) {
+            const existing = members.find(ex => ex.name === m.name);
+            if (!existing) {
+              members.push({
+                name: m.name,
+                emoji: m.emoji || '👤',
+                lat: m.lat || 43.238,
+                lng: m.lng || 76.945,
+                locationName: m.location_name || 'Unknown',
+                items: []
+              });
+            }
+          }
+        });
+      }
+      renderCart();
+      renderMembers();
+      updateMap();
+    }
+  });
+
+  // Another user joined
+  socket.on('member-joined', ({ member }) => {
+    const existing = members.find(m => m.name === member.name);
+    if (!existing) {
+      members.push({
+        name: member.name,
+        emoji: member.emoji || '👤',
+        lat: member.lat || 43.238,
+        lng: member.lng || 76.945,
+        locationName: member.locationName || 'Unknown',
+        items: []
+      });
+      showToast(`${member.name} joined the cart! 👋`);
+    } else {
+      existing.lat = member.lat || existing.lat;
+      existing.lng = member.lng || existing.lng;
+      existing.locationName = member.locationName || existing.locationName;
+    }
+    renderMembers();
+    updateMap();
+  });
+
+  // Another user left
+  socket.on('member-left', ({ name }) => {
+    showToast(`${name} left the cart.`);
+    renderMembers();
+  });
+
+  // Cart updated by another user
+  socket.on('cart-updated', ({ items, updatedBy }) => {
+    cart = items || [];
+    isOptimized = false;
+    saveCart();
+    renderCart();
+    if (updatedBy && updatedBy !== myName) {
+      showToast(`${updatedBy} updated the cart.`);
+    }
+  });
+
+  // Member location/name updated
+  socket.on('member-updated', ({ member, oldName }) => {
+    const ex = members.find(m => m.name === (oldName || member.name));
+    if (ex) {
+      if (oldName) ex.name = member.name;
+      ex.lat = member.lat || ex.lat;
+      ex.lng = member.lng || ex.lng;
+      ex.locationName = member.locationName || ex.locationName;
+      renderMembers();
+      updateMap();
+      if (isOptimized) runOptimizationLocally(false);
+    }
+  });
+
+  // Optimization results from another member
+  socket.on('optimize-updated', ({ cart: newCart, isOptimized: opt, members: memberUpdates }) => {
+    if (Array.isArray(newCart)) {
+      cart = newCart;
+      isOptimized = opt;
+      if (memberUpdates) {
+        memberUpdates.forEach(m => {
+          const ex = members.find(em => em.name === m.name);
+          if (ex) ex.items = m.items || [];
+        });
+      }
+      saveCart();
+      renderCart();
+      renderMembers();
+      updateMap();
+      showToast('Cart assignments optimized! ✨');
+    }
+  });
+
+  // Checkout completed by another member
+  socket.on('checkout-complete', ({ orderId, placedBy }) => {
+    if (placedBy !== myName) {
+      showToast(`${placedBy} completed checkout! Order confirmed.`);
+    }
+  });
+}
+
+function broadcastCartUpdate() {
+  if (socket && cartId) {
+    socket.emit('cart-updated', { cartId, items: cart, updatedBy: myName });
+  }
+}
+
+function broadcastMemberUpdate(oldName) {
+  if (socket && cartId) {
+    socket.emit('member-updated', {
+      cartId,
+      oldName,
+      member: {
+        name: myName || 'Me',
+        lat: members[0].lat,
+        lng: members[0].lng,
+        locationName: members[0].locationName,
+        emoji: members[0].emoji
+      }
+    });
+  }
+}
+
+// Leaflet Map Logic
+let map = null;
+let mapMarkers = {};
+let mapPolylines = [];
+
+function initMap() {
+  const mapEl = document.getElementById('sharedCartMap');
+  if (!mapEl) return;
+  
+  const city = getCityInfo(getSelectedCity());
+  
+  if (map) {
+    map.setView([city.lat, city.lng], city.zoom);
+    return;
+  }
+  
+  if (typeof L === 'undefined') {
+    console.warn("Leaflet is not defined.");
+    return;
+  }
+  
+  map = L.map('sharedCartMap').setView([city.lat, city.lng], city.zoom);
+  
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap contributors'
+  }).addTo(map);
+  
+  updateMap();
+}
+
+function updateMap() {
+  if (!map || typeof L === 'undefined') return;
+  
+  for (let key in mapMarkers) {
+    map.removeLayer(mapMarkers[key]);
+  }
+  mapMarkers = {};
+  
+  mapPolylines.forEach(p => map.removeLayer(p));
+  mapPolylines = [];
+  
+  const cityStores = getStoresForCity();
+  
+  cityStores.forEach(store => {
+    const storeIcon = L.divIcon({
+      className: 'custom-store-marker',
+      html: `<div style="background:${store.color || '#E8445A'}; width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; border:2px solid #fff; box-shadow:0 2px 6px rgba(0,0,0,0.3); font-size:14px">${store.emoji || '🏪'}</div>`,
+      iconSize: [28, 28],
+      iconAnchor: [14, 14]
+    });
+    
+    const marker = L.marker([store.lat, store.lng], { icon: storeIcon })
+      .bindPopup(`<b>${store.name}</b><br>${store.address}`)
+      .addTo(map);
+      
+    mapMarkers['store_' + store.id] = marker;
+  });
+  
+  members.forEach(member => {
+    const isMe = member.name === myName;
+    const userIcon = L.divIcon({
+      className: 'custom-user-marker',
+      html: `<div style="background:${isMe ? 'var(--forest)' : '#F2A03B'}; color:#fff; width:34px; height:34px; border-radius:50%; display:flex; align-items:center; justify-content:center; border:3px solid #fff; box-shadow:0 3px 10px rgba(0,0,0,0.4); font-size:18px">${member.emoji || '👤'}</div>`,
+      iconSize: [34, 34],
+      iconAnchor: [17, 17]
+    });
+    
+    const marker = L.marker([member.lat, member.lng], { icon: userIcon })
+      .bindTooltip(`${member.name} (${isMe ? t('user_identity_me') : t('user_identity_friend')})`, { permanent: true, direction: 'top', className: 'user-tooltip' })
+      .addTo(map);
+      
+    mapMarkers['member_' + member.name] = marker;
+    
+    if (isOptimized && member.items && member.items.length > 0) {
+      const assignedStoreIds = new Set();
+      cart.forEach(item => {
+        if (item.assignedTo === member.name && item.assignedStoreId) {
+          assignedStoreIds.add(item.assignedStoreId);
+        }
+      });
+      
+      assignedStoreIds.forEach(storeId => {
+        const store = getStoreById(storeId);
+        if (store) {
+          const polyline = L.polyline([[member.lat, member.lng], [store.lat, store.lng]], {
+            color: isMe ? 'var(--forest)' : '#F2A03B',
+            dashArray: '5, 8',
+            weight: 3,
+            opacity: 0.8
+          }).addTo(map);
+          mapPolylines.push(polyline);
+        }
+      });
+    }
+  });
+  
+  const latlngs = members.map(m => [m.lat, m.lng]);
+  if (latlngs.length > 1) {
+    map.fitBounds(L.latLngBounds(latlngs), { padding: [50, 50] });
+  } else if (latlngs.length === 1) {
+    map.setView(latlngs[0], 14);
+  }
+}
+
+// Window load sequence
+window.addEventListener('languageChanged', () => {
+  renderCart();
+  renderMembers();
+  updateInviteUrl();
+  updateMap();
+});
+
+document.addEventListener("DOMContentLoaded", async () => {
+  // Ensure we have a server-side cart
+  try {
+    const urlCartId = getCartIdFromURL();
+    const savedCartId = getSavedCartId();
+    const startCartId = urlCartId || savedCartId;
+
+    if (startCartId) {
+      // Ensure this cart exists on the server (auto-creates if needed)
+      const serverCart = await apiGetCart(startCartId);
+      cartId = serverCart.id;
+    } else {
+      // Create a brand new cart
+      const serverCart = await apiCreateCart();
+      cartId = serverCart.id;
+      // Sync local cart items to the new server cart
+      if (cart.length > 0) {
+        await apiUpdateCartItems(cartId, cart);
+      }
+    }
+
+    localStorage.setItem('ff_shared_cart_id', cartId);
+    document.getElementById('syncStatus').textContent = `🟡 Cart: ${cartId}`;
+  } catch(e) {
+    console.warn('Could not reach server, running in offline mode:', e.message);
+    cartId = getSavedCartId() || generateCartId();
+    localStorage.setItem('ff_shared_cart_id', cartId);
+    document.getElementById('syncStatus').textContent = '🔴 Offline';
+  }
+
+  if (!myName) {
+    document.getElementById('nameModal').classList.add('open');
+  } else {
+    initConnection();
+    updateInviteUrl();
+    if (isTrackingGPS) {
+      toggleGPSTracking(true);
+    }
+  }
+
+  setTimeout(initMap, 100);
+});
+
+renderCart();
+renderMembers();
+</script>
+<script src="js/nav.js"></script>
+</body>
+</html>
