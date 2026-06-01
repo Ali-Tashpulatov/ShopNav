@@ -17,7 +17,7 @@
 .share-code{font-family:'DM Mono',monospace;font-size:1.5rem;font-weight:700;color:var(--accent);letter-spacing:.2em}
 .cart-layout{display:grid;grid-template-columns:minmax(0, 1fr);gap:2rem;max-width:1100px;margin:0 auto;padding:2.5rem 1.5rem}
 @media(min-width:900px){.cart-layout{grid-template-columns:minmax(0, 1fr) 340px}}
-.cart-item{display:flex;align-items:center;gap:1rem;padding:1rem;background:var(--white);border:1px solid var(--sand);border-radius:12px;margin-bottom:.6rem;transition:all .2s ease;cursor:pointer}
+.cart-item{display:flex;align-items:center;gap:1rem;padding:1rem;background:var(--white);border:1px solid var(--sand);border-radius:12px;margin-bottom:.6rem;transition:all .2s ease;cursor:pointer;flex-wrap:wrap}
 .cart-item:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(5,150,105,0.08);border-color:rgba(5,150,105,0.2)}
 .ci-emoji{font-size:1.8rem;flex-shrink:0}
 .ci-info{flex:1}.ci-name{font-weight:600;font-size:.92rem}.ci-brand{font-size:.78rem;color:var(--muted)}
@@ -156,6 +156,7 @@
   border-bottom: 2px solid var(--warm);
   padding-bottom: 0.75rem;
   margin-bottom: 1rem;
+  flex-wrap: wrap;
 }
 .split-column-title {
   font-weight: 700;
