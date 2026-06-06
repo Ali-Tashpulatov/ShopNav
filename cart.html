@@ -39,12 +39,7 @@
 .summary-section{background:var(--white);border:1px solid var(--sand);border-radius:16px;padding:1.25rem;margin-top:1rem}
 .summary-row{display:flex;justify-content:space-between;padding:.4rem 0;font-size:.9rem;border-bottom:1px solid var(--light)}
 .summary-row:last-child{border:none;font-weight:700;font-size:1.05rem;color:var(--forest)}
-.payment-options{display:flex;flex-direction:column;gap:.5rem;margin-top:.75rem}
-.payment-option{cursor:pointer;display:block}
-.payment-option input{display:none}
-.payment-box{display:flex;align-items:center;gap:.75rem;padding:.75rem 1rem;border:1px solid var(--sand);border-radius:12px;transition:all .2s;background:var(--white)}
-.payment-option input:checked + .payment-box{border-color:var(--forest);background:rgba(45,74,47,.05);box-shadow:0 0 0 1px var(--forest)}
-.payment-icon{font-size:1.2rem}
+
 #sharedCartMap {
   height: 320px;
   border-radius: 14px;
@@ -307,32 +302,7 @@
         <div style="font-weight:700;margin-bottom:.75rem">🧮 <span data-i18n="cart_summary_title">Cart Summary</span></div>
         <div id="summaryRows"></div>
       </div>
-      <div class="summary-section" style="margin-top:1rem">
-        <div style="font-weight:700;margin-bottom:.75rem">💳 <span data-i18n="payment_method_title">Payment Method</span></div>
-        <div class="payment-options">
-          <label class="payment-option">
-            <input type="radio" name="payment" value="Cash" checked>
-            <div class="payment-box">
-              <span class="payment-icon">💵</span>
-              <span data-i18n="payment_cash">Cash</span>
-            </div>
-          </label>
-          <label class="payment-option">
-            <input type="radio" name="payment" value="Card">
-            <div class="payment-box">
-              <span class="payment-icon">💳</span>
-              <span data-i18n="payment_card">Card</span>
-            </div>
-          </label>
-          <label class="payment-option">
-            <input type="radio" name="payment" value="Kaspi">
-            <div class="payment-box">
-              <span class="payment-icon">🇰🇿</span>
-              <span data-i18n="payment_kaspi">Kaspi</span>
-            </div>
-          </label>
-        </div>
-      </div>
+
       <button class="btn btn-accent w-full" style="margin-top:1rem" onclick="checkout()" data-i18n="checkout_btn">Checkout</button>
       <button class="btn btn-primary w-full" style="margin-top:.75rem" onclick="optimizeCart()" data-i18n="optimize_btn">Optimize & Assign</button>
     </aside>
@@ -1045,11 +1015,9 @@ function initConnection() {
   // Server sends current cart state when we first join
   socket.on('cart-synced', ({ cart: serverCart }) => {
     if (serverCart && serverCart.items) {
-      // Merge: use server cart if it has more items, else keep local
-      if (serverCart.items.length >= cart.length) {
-        cart = serverCart.items;
-        saveCart();
-      }
+      // Always adopt the server's cart state to stay in sync
+      cart = serverCart.items;
+      saveCart();
       // Also load existing members from server
       if (serverCart.members && serverCart.members.length > 0) {
         serverCart.members.forEach(m => {
@@ -1293,12 +1261,25 @@ document.addEventListener("DOMContentLoaded", async () => {
   try {
     const urlCartId = getCartIdFromURL();
     const savedCartId = getSavedCartId();
+    
+    if (urlCartId && urlCartId !== savedCartId) {
+      // Joining a new shared cart from a link. Clear local cart
+      // so we don't mix old local items into the shared cart.
+      cart = [];
+      localStorage.setItem('ff_cart', '[]');
+      isOptimized = false;
+      localStorage.setItem('ff_shared_cart_id', urlCartId);
+    }
+
     const startCartId = urlCartId || savedCartId;
 
     if (startCartId) {
       // Ensure this cart exists on the server (auto-creates if needed)
       const serverCart = await apiGetCart(startCartId);
       cartId = serverCart.id;
+      // Adopt the server's truth for the cart items
+      cart = serverCart.items || [];
+      saveCart();
     } else {
       // Create a brand new cart
       const serverCart = await apiCreateCart();

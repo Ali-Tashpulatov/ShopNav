@@ -1679,6 +1679,7 @@ document.addEventListener("DOMContentLoaded", () => {
       profileIcon.onclick = (e) => { e.preventDefault(); openAuthModal(); };
       
       updateNavbarHeart();
+      updateAuthNavbar();
     }
   }
 
@@ -1779,21 +1780,110 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 });
 
+function updateAuthNavbar() {
+  const navActions = document.querySelector('.navbar-actions');
+  if (!navActions) return;
+  
+  const userStr = localStorage.getItem('ff_user');
+  const getStartedBtn = navActions.querySelector('.nav-cta');
+  let profileAvatar = navActions.querySelector('.nav-profile-btn');
+  
+  if (userStr) {
+    const user = JSON.parse(userStr);
+    const firstLetter = (user.email || 'U').charAt(0).toUpperCase();
+    
+    // Hide Get Started button
+    if (getStartedBtn) {
+      getStartedBtn.style.display = 'none';
+    }
+    
+    // Create profile avatar if it doesn't exist
+    if (!profileAvatar) {
+      profileAvatar = document.createElement('button');
+      profileAvatar.className = 'nav-profile-btn';
+      profileAvatar.onclick = (e) => {
+        e.preventDefault();
+        openAuthModal();
+      };
+      navActions.appendChild(profileAvatar);
+    }
+    
+    profileAvatar.textContent = firstLetter;
+    profileAvatar.setAttribute('title', user.email);
+    profileAvatar.style.display = 'inline-flex';
+  } else {
+    // Show Get Started button
+    if (getStartedBtn) {
+      getStartedBtn.style.display = 'inline-flex';
+    }
+    // Hide profile avatar if it exists
+    if (profileAvatar) {
+      profileAvatar.style.display = 'none';
+    }
+  }
+}
+
+function showModalMessage(panelId, message, type = 'success') {
+  const panel = document.getElementById(panelId);
+  if (!panel) return;
+  
+  let msgEl = panel.querySelector('.modal-inline-message');
+  if (!msgEl) {
+    msgEl = document.createElement('div');
+    msgEl.className = 'modal-inline-message';
+    const desc = panel.querySelector('.modal-desc');
+    if (desc) {
+      desc.insertAdjacentElement('afterend', msgEl);
+    } else {
+      panel.insertBefore(msgEl, panel.firstChild);
+    }
+  }
+  
+  msgEl.className = `modal-inline-message toast toast-${type}`;
+  msgEl.innerHTML = `
+    <span style="font-size: 1.15rem; line-height: 1;">${type === 'success' ? '✨' : '⚠️'}</span>
+    <div>${message}</div>
+  `;
+}
+
 function openAuthModal() {
   document.getElementById('authModalOverlay').classList.add('open');
-  const user = localStorage.getItem('ff_user');
-  if (user) {
+  const userStr = localStorage.getItem('ff_user');
+  if (userStr) {
     switchAuthTab('profile');
-    document.getElementById('profileEmailDisplay').textContent = JSON.parse(user).email;
+    const user = JSON.parse(userStr);
+    document.getElementById('profileEmailDisplay').textContent = user.email;
+    const profileAvatarEl = document.querySelector('#panel-profile .profile-avatar');
+    if (profileAvatarEl) {
+      profileAvatarEl.textContent = (user.email || 'U').charAt(0).toUpperCase();
+    }
   } else {
     switchAuthTab('login');
   }
 }
-function closeAuthModal() { document.getElementById('authModalOverlay').classList.remove('open'); }
+
+function closeAuthModal() {
+  document.getElementById('authModalOverlay').classList.remove('open');
+  // Clear modal message and reset fields after transition
+  setTimeout(() => {
+    document.querySelectorAll('.modal-inline-message').forEach(m => m.remove());
+    const regEmail = document.getElementById('regEmail');
+    const regPass = document.getElementById('regPass');
+    const loginEmail = document.getElementById('loginEmail');
+    const loginPass = document.getElementById('loginPass');
+    if (regEmail) regEmail.value = '';
+    if (regPass) regPass.value = '';
+    if (loginEmail) loginEmail.value = '';
+    if (loginPass) loginPass.value = '';
+  }, 380);
+}
 
 function switchAuthTab(tab) {
   document.querySelectorAll('#authModalOverlay .modal-tab').forEach(t => t.classList.remove('active'));
   document.querySelectorAll('#authModalOverlay .modal-panel').forEach(p => p.classList.remove('active'));
+  
+  // Clear modal message
+  document.querySelectorAll('.modal-inline-message').forEach(m => m.remove());
   
   const tabEl = document.getElementById('tab-'+tab);
   if (tabEl) tabEl.classList.add('active');
@@ -1805,26 +1895,44 @@ function switchAuthTab(tab) {
 function doRegister() {
   const email = document.getElementById('regEmail').value.trim();
   const pass = document.getElementById('regPass').value;
-  if (!email || !pass) return alert(t('alert_fill_fields'));
+  if (!email || !pass) return showModalMessage('panel-register', t('alert_fill_fields'), 'danger');
   
   localStorage.setItem('ff_account', JSON.stringify({ email, pass }));
   localStorage.setItem('ff_user', JSON.stringify({ email }));
-  alert(t('alert_register_success'));
-  closeAuthModal();
+  
+  showModalMessage('panel-register', t('alert_register_success'), 'success');
+  updateAuthNavbar();
+  
+  setTimeout(() => {
+    closeAuthModal();
+  }, 1500);
 }
 
 function doLogin() {
   const email = document.getElementById('loginEmail').value.trim();
   const pass = document.getElementById('loginPass').value;
+  if (!email || !pass) return showModalMessage('panel-login', t('alert_fill_fields'), 'danger');
+  
   const acc = JSON.parse(localStorage.getItem('ff_account'));
   
   if (acc && acc.email === email && acc.pass === pass) {
     localStorage.setItem('ff_user', JSON.stringify({ email }));
-    alert(t('alert_login_success'));
-    closeAuthModal();
+    showModalMessage('panel-login', t('alert_login_success'), 'success');
+    updateAuthNavbar();
+    
+    setTimeout(() => {
+      closeAuthModal();
+    }, 1500);
   } else {
-    alert(t('alert_login_fail'));
+    showModalMessage('panel-login', t('alert_login_fail'), 'danger');
   }
+}
+
+function doLogout() {
+  localStorage.removeItem('ff_user');
+  updateAuthNavbar();
+  showToast(t('alert_logout') || 'Logged out.');
+  closeAuthModal();
 }
 
 function renderWishlist() {
