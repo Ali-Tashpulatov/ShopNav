@@ -211,6 +211,39 @@ p  { line-height: 1.7; }
   font-size: 18px; color: var(--ink);
   cursor: pointer;
 }
+@media (max-width: 800px) {
+  .navbar {
+    flex-wrap: wrap;
+    height: auto;
+    padding: 0.75rem 1rem;
+    position: relative;
+    gap: 0.75rem 0;
+  }
+  .navbar-logo {
+    order: 1;
+    flex: 1 1 calc(100% - 50px);
+  }
+  .navbar-burger {
+    order: 2;
+    flex: 0 0 40px;
+    display: flex;
+    justify-content: flex-end;
+  }
+  .city-selector {
+    order: 3;
+    flex: 0 0 auto;
+    margin-left: 0 !important;
+  }
+  .navbar-actions {
+    order: 4;
+    flex: 1 1 auto;
+    justify-content: flex-end;
+  }
+  .navbar-links {
+    top: 100%;
+    z-index: 1002;
+  }
+}
 @media (min-width: 600px) {
   .navbar-search { display: flex; flex: 1; max-width: 220px; }
 }

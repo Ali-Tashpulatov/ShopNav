@@ -4065,3 +4065,11 @@ function showToast(message, buttonText, buttonUrl) {
   }, 4000);
 }
 
+
+// Fixed missing toggleMenu function for mobile hamburger menu
+window.toggleMenu = function() {
+  const links = document.querySelector('.navbar-links');
+  if (links) {
+    links.classList.toggle('active');
+  }
+};
