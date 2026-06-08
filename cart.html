@@ -49,6 +49,14 @@
   z-index: 10;
   position: relative;
 }
+@media(max-width:600px){#sharedCartMap{height:200px}}
+@media(max-width:899px) {
+  .checkout-buttons-wrap { position: fixed; bottom: 0; left: 0; right: 0; background: var(--white); padding: 1rem 1.5rem calc(1rem + env(safe-area-inset-bottom)); border-top: 1px solid var(--sand); box-shadow: 0 -4px 20px rgba(0,0,0,0.05); z-index: 1000; }
+  .cart-layout { padding-bottom: 120px; }
+}
+@media(min-width:900px) {
+  .checkout-buttons-wrap { margin-top: 1rem; }
+}
 .shared-map-card {
   background: var(--white);
   border: 1px solid var(--sand);
@@ -234,7 +242,6 @@
 <div class="page-wrap">
   <div class="cart-hero">
     <div class="hero-dots"></div>
-    <div class="hero-badge" style="margin-bottom:1.5rem">🛒 <span data-i18n="cart_hero_badge">Shared Cart</span></div>
     <h1 data-i18n="cart_hero_title">Shop Together,<br>Save Time</h1>
     <p data-i18n="cart_hero_desc">Share your cart with household members. Each person sees which items are closest to them — split the trip.</p>
     <div class="share-code-box" style="display:none">
@@ -303,8 +310,10 @@
         <div id="summaryRows"></div>
       </div>
 
-      <button class="btn btn-accent w-full" style="margin-top:1rem" onclick="checkout()" data-i18n="checkout_btn">Checkout</button>
-      <button class="btn btn-primary w-full" style="margin-top:.75rem" onclick="optimizeCart()" data-i18n="optimize_btn">Optimize & Assign</button>
+      <div class="checkout-buttons-wrap">
+        <button class="btn btn-accent w-full" style="margin-bottom:.75rem" onclick="checkout()" data-i18n="checkout_btn">Checkout</button>
+        <button class="btn btn-primary w-full" onclick="optimizeCart()" data-i18n="optimize_btn">Optimize & Assign</button>
+      </div>
     </aside>
   </div>
 </div>
@@ -742,7 +751,7 @@ function renderCart(){
     let storeDropdown = '';
     if (prod) {
       const storesForProd = getStoresForProduct(prod);
-      storeDropdown = `<select onchange="changeItemStore(${i}, this.value)" style="border:1px solid var(--sand);background:var(--cream);border-radius:6px;padding:2px 4px;font-size:0.75rem;margin-top:0.2rem;max-width:200px;">
+      storeDropdown = `<select onchange="changeItemStore(${i}, this.value)" style="border:1px solid var(--sand);background:var(--cream);border-radius:6px;padding:2px 4px;font-size:0.75rem;margin-top:0.2rem;width:100%;max-width:200px;">
         <option value="">${t('cheapest_auto') || 'Auto (Cheapest)'}</option>
         ${storesForProd.map(s => `<option value="${s.id}" ${(targetStoreId === s.id && item.storeId) ? 'selected="selected"' : ''}>${s.emoji} ${s.name} (₸${prod.price[s.id]})</option>`).join('')}
       </select>`;
@@ -766,6 +775,8 @@ function renderCart(){
     </div>`;
   }).join('');
   renderSummary();
+  // Animate newly added cart items
+  if (window.animateCartItems) window.animateCartItems();
 }
 
 function renderMembers() {
@@ -1315,6 +1326,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 renderCart();
 renderMembers();
 </script>
+<script src="js/animations.js"></script>
 <script src="js/nav.js"></script>
 </body>
 </html>

@@ -10,6 +10,7 @@ const path = require('path');
 
 const cartRoutes = require('./routes/carts');
 const orderRoutes = require('./routes/orders');
+const likesRoutes = require('./routes/likes');
 const dbModule = require('./db/database');
 
 const app = express();
@@ -36,6 +37,7 @@ app.get('/health', (req, res) => {
 // ── REST API Routes ─────────────────────────────────────────
 app.use('/api/carts', cartRoutes);
 app.use('/api/orders', orderRoutes);
+app.use('/api/likes', likesRoutes);
 
 // Convenience redirect: /cart/:cartId → cart.html?cartId=...
 app.get('/cart/:cartId', (req, res) => {

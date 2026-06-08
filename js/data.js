@@ -1989,6 +1989,42 @@ function openWishlistModal() {
 }
 function closeWishlistModal() { document.getElementById('wishlistModalOverlay').classList.remove('open'); }
 
+window.globalLikes = {};
+
+function fetchGlobalLikes() {
+  fetch('/api/likes')
+    .then(r => r.json())
+    .then(data => {
+      if (data && data.success) {
+        window.globalLikes = data.likes;
+        updateAllLikesUI();
+      }
+    })
+    .catch(err => console.error('Failed to fetch likes', err));
+}
+
+function updateAllLikesUI() {
+  document.querySelectorAll('.like-count').forEach(el => {
+    const pid = el.getAttribute('data-product-id');
+    const count = window.globalLikes[pid] || 0;
+    el.textContent = count > 0 ? ` ${count}` : '';
+  });
+}
+
+async function apiToggleLike(productId, isLike) {
+  const action = isLike ? 'increment' : 'decrement';
+  try {
+    const res = await fetch(`/api/likes/${productId}/${action}`, { method: 'POST' });
+    const data = await res.json();
+    if (data.success) {
+      window.globalLikes[productId] = data.likesCount;
+      updateAllLikesUI();
+    }
+  } catch (err) {
+    console.error('Failed to update like for', productId, err);
+  }
+}
+
 function updateNavbarHeart() {
   const navActions = document.querySelector('.navbar-actions');
   if (navActions) {
@@ -2001,6 +2037,7 @@ function updateNavbarHeart() {
 }
 // Patch togFav / toggleFav after all page scripts have run
 window.addEventListener('load', function() {
+  fetchGlobalLikes();
   // product.html uses togFav()
   if (typeof window.togFav === 'function') {
     const _orig = window.togFav;

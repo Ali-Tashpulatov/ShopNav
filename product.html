@@ -17,7 +17,8 @@
 .pbrand{color:var(--muted);font-size:.9rem;margin-bottom:1.2rem}
 .pprice{font-size:2.2rem;font-weight:700;color:var(--forest)}
 .punit{font-size:.88rem;color:var(--muted);font-family:'DM Mono',monospace;margin-top:.2rem}
-.tab-row{display:flex;border-bottom:2px solid var(--sand);margin:1.5rem 0}
+.tab-row{display:flex;border-bottom:2px solid var(--sand);margin:1.5rem 0;overflow-x:auto;white-space:nowrap;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.tab-row::-webkit-scrollbar{display:none}
 .tab{padding:.6rem 1.2rem;font-weight:600;font-size:.88rem;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .2s}
 .tab.active{color:var(--forest);border-bottom-color:var(--forest)}
 .tab-panel{display:none}.tab-panel.active{display:block}
@@ -67,7 +68,7 @@
         <div id="cartControls" style="flex:1">
           <button class="btn btn-primary w-full" id="cartBtn" onclick="addCart()"><span>🛒</span> <span data-i18n="btn_add_cart">Add to Cart</span></button>
         </div>
-        <button class="btn btn-ghost btn-icon" id="favBtn" onclick="togFav()">🤍</button>
+        <button class="btn btn-ghost" id="favBtn" onclick="togFav()">🤍<span class="like-count" data-product-id=""></span></button>
       </div>
       <div class="pat-box" id="patBox" style="display:none"></div>
       <div class="fresh-box" id="freshBox" style="display:none">
@@ -99,7 +100,7 @@
         <div style="margin-bottom:.75rem">
           <span data-i18n="store_label">Store</span>: <select id="hStore" onchange="renderChart()" style="border:1px solid var(--sand);border-radius:8px;padding:.3rem .6rem;font-size:.84rem;outline:none"></select>
         </div>
-        <div class="chart-wrap"><canvas id="priceChart" height="200"></canvas></div>
+        <div class="chart-wrap" style="position:relative;height:220px;min-height:220px"><canvas id="priceChart" height="200"></canvas></div>
       </div>
       <div class="tab-panel" id="tab-related"><div class="rel-grid" id="relGrid"></div></div>
     </div>
@@ -190,7 +191,12 @@ function init(){
     avText += ` (${p.stockQuantity} ${t('products_plural')||'items'} in stock)`;
   }
   av.innerHTML=`<div class="avail-dot"></div>${avText}`;
-  if(favs.includes(p.id))document.getElementById('favBtn').textContent='❤️';
+  const isFavProd = favs.includes(p.id);
+  const fb = document.getElementById('favBtn');
+  fb.innerHTML = (isFavProd ? '❤️' : '🤍') + '<span class="like-count" data-product-id="'+p.id+'"></span>';
+  if (window.globalLikes && window.globalLikes[p.id] > 0) {
+    fb.querySelector('.like-count').textContent = ' ' + window.globalLikes[p.id];
+  }
   renderCartControls();
   const fresh=FRESHNESS[p.id];
   if(fresh){
@@ -238,7 +244,7 @@ function init(){
         </div>
         <div class="scr-sub">${s.distance} ${t('km_away')} · ${stEl}</div>
       </div>
-      <div style="text-align:right; margin-right: 1rem;"><div class="scr-p">₸${price.toLocaleString()}</div>${unit?`<div class="scr-u">${unit.value}₸/${t('per_'+unit.label.replace('per ',''))}</div>`:''}</div>
+      <div style="text-align:right;"><div class="scr-p">₸${price.toLocaleString()}</div>${unit?`<div class="scr-u">${unit.value}₸/${t('per_'+unit.label.replace('per ',''))}</div>`:''}</div>
       <button class="btn btn-sm ${isSelected ? 'btn-primary' : 'btn-ghost'}" onclick="selectStore('${s.id}', event)">${isSelected ? 'Selected' : 'Select'}</button>
       <a href="stores.html?store=${s.id}" class="btn btn-ghost btn-sm" onclick="event.stopPropagation()">🗺</a>
     </div>`;
@@ -285,8 +291,19 @@ function sw(id,el){
 }
 function togFav(){
   const i=favs.indexOf(prod.id),btn=document.getElementById('favBtn');
-  if(i>-1){favs.splice(i,1);btn.textContent='🤍';}else{favs.push(prod.id);btn.textContent='❤️';}
+  let isLike = false;
+  if(i>-1){
+    favs.splice(i,1);
+    btn.innerHTML='🤍<span class="like-count" data-product-id="'+prod.id+'"></span>';
+    isLike = false;
+  }else{
+    favs.push(prod.id);
+    btn.innerHTML='❤️<span class="like-count" data-product-id="'+prod.id+'"></span>';
+    isLike = true;
+  }
   localStorage.setItem('ff_favs',JSON.stringify(favs));
+  if (window.apiToggleLike) window.apiToggleLike(prod.id, isLike);
+  if (window.updateAllLikesUI) window.updateAllLikesUI();
 }
 function renderCartControls(){
   const cart=JSON.parse(localStorage.getItem('ff_cart')||'[]');
@@ -313,9 +330,26 @@ function updateCartQty(delta){
 }
 
 function addCart(){
+  if(!selectedStoreId){
+    if(window.showToast) window.showToast('Please select a supermarket first.', 'warn');
+    else alert('Please select a supermarket first.');
+    const tabStoresBtn = document.querySelector('.tab[onclick*="stores"]');
+    if(tabStoresBtn) sw('stores', tabStoresBtn);
+    const storeList = document.getElementById('storeList');
+    if(storeList){
+      storeList.scrollIntoView({behavior: 'smooth', block: 'center'});
+      storeList.style.transition = 'outline 0.3s';
+      storeList.style.outline = '2px solid #ef4444';
+      storeList.style.outlineOffset = '4px';
+      storeList.style.borderRadius = '8px';
+      setTimeout(() => storeList.style.outline = 'none', 2000);
+    }
+    return;
+  }
   const cart=JSON.parse(localStorage.getItem('ff_cart')||'[]');
   if(!cart.find(i=>i.id===prod.id)) {
     cart.push({id:prod.id,name:prod.name,emoji:prod.emoji,quantity:1, storeId: selectedStoreId});
+    if(window.showToast) window.showToast(`<strong>${prod.name}</strong> added to cart 🛒`, 'success');
   }
   localStorage.setItem('ff_cart',JSON.stringify(cart));
   syncCartToServer(cart);
@@ -336,6 +370,7 @@ function selectStore(storeId, event){
 function submitFreshReport(){alert(t('looks_fresh_alert'));}
 function submitNearExpiryReport(){alert(t('near_expiry_alert'));}
 </script>
+<script src="js/animations.js"></script>
 <script src="js/nav.js"></script>
 </body>
 </html>

@@ -107,6 +107,11 @@ db.exec(`
     password_hash TEXT,
     created_at  DATETIME DEFAULT (datetime('now'))
   );
+
+  CREATE TABLE IF NOT EXISTS product_likes (
+    product_id  TEXT PRIMARY KEY,
+    likes_count INTEGER NOT NULL DEFAULT 0
+  );
 `);
 
 // ── Cart Queries ────────────────────────────────────────────
@@ -237,6 +242,48 @@ function generateCartId() {
   return code;
 }
 
+// ── Likes Queries ───────────────────────────────────────────
+
+/**
+ * Get all product likes mapping { [productId]: count }
+ */
+function getAllProductLikes() {
+  const rows = db.prepare(`SELECT product_id, likes_count FROM product_likes`).all();
+  const result = {};
+  for (const row of rows) {
+    result[row.product_id] = row.likes_count;
+  }
+  return result;
+}
+
+/**
+ * Increment like for a product
+ */
+function incrementProductLike(productId) {
+  const stmt = db.prepare(`
+    INSERT INTO product_likes (product_id, likes_count)
+    VALUES (?, 1)
+    ON CONFLICT(product_id) DO UPDATE SET likes_count = likes_count + 1
+  `);
+  stmt.run(productId);
+  const row = db.prepare(`SELECT likes_count FROM product_likes WHERE product_id = ?`).get(productId);
+  return row ? row.likes_count : 0;
+}
+
+/**
+ * Decrement like for a product
+ */
+function decrementProductLike(productId) {
+  const stmt = db.prepare(`
+    UPDATE product_likes
+    SET likes_count = MAX(0, likes_count - 1)
+    WHERE product_id = ?
+  `);
+  stmt.run(productId);
+  const row = db.prepare(`SELECT likes_count FROM product_likes WHERE product_id = ?`).get(productId);
+  return row ? row.likes_count : 0;
+}
+
 module.exports = {
   db,
   createCart,
@@ -246,5 +293,8 @@ module.exports = {
   createOrder,
   getOrder,
   listOrders,
-  generateCartId
+  generateCartId,
+  getAllProductLikes,
+  incrementProductLike,
+  decrementProductLike
 };

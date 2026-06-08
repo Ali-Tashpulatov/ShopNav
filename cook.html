@@ -6,7 +6,7 @@
 <link rel="stylesheet" href="css/main.css"/>
 <style>
 .page-wrap{padding-top:64px;background:var(--cream);min-height:100vh}
-.cook-hero{background:linear-gradient(135deg,var(--forest) 0%,#1a3d1c 100%);padding:5rem 1.5rem 4rem;text-align:center;position:relative;overflow:hidden}
+.cook-hero{background:linear-gradient(135deg,var(--forest) 0%,#1a3d1c 100%);padding:4rem 1.5rem;text-align:center;position:relative;overflow:hidden}
 .cook-hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 60% 50% at 50% 100%,rgba(242,160,59,.2),transparent)}
 .cook-hero h1{color:var(--cream);margin-bottom:.75rem;position:relative;z-index:1}
 .cook-hero h1 em{color:var(--accent);font-style:italic}
@@ -16,7 +16,7 @@
 .dish-input:focus{box-shadow:0 24px 80px rgba(0,0,0,.4);transform:translateY(-2px)}
 .dish-input::placeholder{color:var(--muted)}
 .dish-suggestions{position:absolute;top:calc(100% + 12px);left:0;right:0;background:var(--white);border-radius:16px;box-shadow:var(--shadow-xl);overflow:hidden;display:none;z-index:10}
-.dish-sug-item{padding:.75rem 1.25rem;cursor:pointer;display:flex;align-items:center;gap.75rem;font-size:.92rem;transition:background .15s}
+.dish-sug-item{padding:.75rem 1.25rem;cursor:pointer;display:flex;align-items:center;gap:.75rem;font-size:.92rem;transition:background .15s}
 .dish-sug-item:hover{background:var(--warm)}
 .recipe-chips{display:flex;gap:.75rem;flex-wrap:wrap;justify-content:center;margin-top:2rem;position:relative;z-index:1}
 .recipe-chip{background:rgba(253,248,240,.12);border:1px solid rgba(253,248,240,.2);color:var(--cream);padding:.55rem 1.25rem;border-radius:100px;font-size:.9rem;cursor:pointer;transition:all .2s}
@@ -67,7 +67,6 @@
 <div class="page-wrap">
   <div class="cook-hero">
     <div class="hero-dots"></div>
-    <div class="hero-badge" style="margin-bottom:1.5rem" data-i18n="cook_hero_badge">🍲 Cook Mode</div>
     <h1 data-i18n="cook_hero_title">What do you want<br>to <em>cook</em> today?</h1>
     <p data-i18n="cook_hero_desc">Enter any dish and instantly see all ingredients, which stores carry them, and the cheapest basket combination.</p>
     <div class="dish-input-wrap">
@@ -181,7 +180,7 @@ function renderIngredients(recipe){
         <div class="ing-stores">${stores.slice(0,3).map(s=>`<span class="ing-store-tag" style="background:${s.color}22;color:${s.color}">${s.emoji} ${s.name}</span>`).join('')}
         ${stores.length>3?`<span style="font-size:.73rem;color:var(--muted)">+${stores.length-3} ${t('more_label')}</span>`:''}</div>
       </div>
-      <div style="text-align:right">
+      <div style="text-align:right;flex-shrink:0;min-width:80px">
         <div class="ing-best-price">${bestPrice?'₸'+bestPrice.toLocaleString():t('not_available')}</div>
         ${unit?`<div class="ing-unit">${unit.value}₸/${t('per_'+unit.label.replace('per ',''))}</div>`:''}
         <a href="product.html?id=${p.id}" style="font-size:.75rem;color:var(--forest);text-decoration:underline">${t('details_label')} →</a>
@@ -212,9 +211,9 @@ function renderBasket(recipe){
   if(sorted.length){
     sorted.forEach((entry,i)=>{
       br.innerHTML+=`<div class="basket-store-row ${i===0?'cheapest':''}">
-        <div style="display:flex;align-items:center;gap:.75rem">
-          <span style="font-size:1.3rem">${entry.store.emoji}</span>
-          <div><div style="font-weight:600">${entry.store.name}${i===0?` <span class="badge badge-forest">${t('cheapest_badge')}</span>`:''}</div>
+        <div style="display:flex;align-items:center;gap:.75rem;min-width:0;flex:1;padding-right:.5rem">
+          <span style="font-size:1.3rem;flex-shrink:0">${entry.store.emoji}</span>
+          <div style="min-width:0"><div style="font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${entry.store.name}${i===0?` <span class="badge badge-forest">${t('cheapest_badge')}</span>`:''}</div>
           <div style="font-size:.78rem;color:var(--muted)">${entry.store.distance}km ${t('away')} · ${t('all_items_available')}</div></div>
         </div>
         <div class="basket-total">₸${entry.total.toLocaleString()}</div>
@@ -241,10 +240,10 @@ function renderBasket(recipe){
       <div style="font-weight:600;margin-bottom:.5rem;color:var(--muted);font-size:.85rem">✨ ${t('optimal_split_title')}</div>`;
     Object.values(splitPlan).forEach(sp=>{
       br.innerHTML+=`<div class="basket-store-row">
-        <div style="display:flex;align-items:center;gap:.75rem">
-          <span style="font-size:1.3rem">${sp.store?.emoji}</span>
-          <div><div style="font-weight:600">${sp.store?.name}</div>
-          <div style="font-size:.76rem;color:var(--muted)">${sp.items.join(', ')}</div></div>
+        <div style="display:flex;align-items:center;gap:.75rem;min-width:0;flex:1;padding-right:.5rem">
+          <span style="font-size:1.3rem;flex-shrink:0">${sp.store?.emoji}</span>
+          <div style="min-width:0"><div style="font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${sp.store?.name}</div>
+          <div style="font-size:.76rem;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${sp.items.join(', ')}</div></div>
         </div>
         <div class="basket-total">₸${sp.total.toLocaleString()}</div>
       </div>`;
@@ -331,6 +330,7 @@ document.addEventListener('DOMContentLoaded', () => {
   renderRecipeChips();
 });
 </script>
+<script src="js/animations.js"></script>
 <script src="js/nav.js"></script>
 </body>
 </html>

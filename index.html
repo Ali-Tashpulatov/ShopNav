@@ -38,9 +38,9 @@
 .mode-tag{display:inline-block;margin-top:1rem;font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--accent)}
 .mode-card.featured{border-color:rgba(242,160,59,.4);background:rgba(242,160,59,.08)}
 .mode-card.featured:hover{background:rgba(242,160,59,.12)}
-.deals-row{display:flex;gap:1rem;overflow-x:auto;padding-bottom:.5rem;scrollbar-width:none}
+.deals-row{display:flex;gap:1rem;overflow-x:auto;padding-bottom:.5rem;scrollbar-width:none;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch}
 .deals-row::-webkit-scrollbar{display:none}
-.deal-card{background:var(--white);border:1px solid var(--sand);border-radius:14px;padding:1rem;min-width:200px;flex-shrink:0;transition:all .2s ease;cursor:pointer}
+.deal-card{background:var(--white);border:1px solid var(--sand);border-radius:14px;padding:1rem;min-width:200px;flex-shrink:0;transition:all .2s ease;cursor:pointer;scroll-snap-align:start}
 .deal-card:hover{box-shadow:var(--shadow-lg);transform:translateY(-3px)}
 .deal-emoji{font-size:2.2rem;margin-bottom:.6rem}
 .deal-name{font-weight:600;font-size:.9rem;color:var(--ink);margin-bottom:.2rem}
@@ -51,7 +51,7 @@
 .deal-drop{font-size:.75rem;font-weight:600;color:var(--danger)}
 .cats-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:1rem}
 @media(min-width:800px){.cats-grid{grid-template-columns:repeat(4,1fr)}}
-.how-steps{display:grid;grid-template-columns:1fr 1fr;gap:1rem;position:relative}
+.how-steps{display:grid;grid-template-columns:1fr;gap:1rem;position:relative}
 
 .how-steps::before{display:none;content:'';position:absolute;top:28px;left:10%;right:10%;height:2px;background:linear-gradient(90deg,var(--forest),var(--accent));opacity:.2;border-radius:2px}
 .step-item{text-align:center;position:relative;z-index:1}
@@ -59,6 +59,7 @@
 .step-icon{font-size:1.3rem;margin-bottom:.5rem}
 .step-title{font-weight:700;font-size:.88rem;margin-bottom:.3rem}
 .step-desc{font-size:.78rem;color:var(--muted);line-height:1.5}
+@media(min-width:480px){.how-steps{grid-template-columns:1fr 1fr}}
 @media(min-width:720px){.how-steps{grid-template-columns:repeat(5,1fr)}.how-steps::before{display:block}}
 footer{background:var(--charcoal);color:rgba(253,248,240,.45);text-align:center;padding:3rem 1.5rem;font-size:.85rem;line-height:2.2}
 .footer-logo{font-family:'Playfair Display',serif;font-size:1.8rem;font-weight:900;color:var(--cream);margin-bottom:.5rem}
@@ -553,6 +554,7 @@ document.addEventListener("DOMContentLoaded", () => {
 </script>
 
 <!-- GSAP + Lenis animation system -->
+<script src="js/animations.js"></script>
 <script src="js/nav.js"></script>
 </body>
 </html>
