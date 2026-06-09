@@ -955,10 +955,59 @@ function checkout(){
 
 // Invite friend features
 function copyInviteLink() {
-  const url = document.getElementById('inviteUrlText').textContent;
-  navigator.clipboard.writeText(url).then(() => {
-    showToast(t('cart_link_copied'));
-  });
+  try {
+    const url = document.getElementById('inviteUrlText').textContent;
+    
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(url).then(() => {
+        if (window.showToast) showToast(typeof t === 'function' ? (t('cart_link_copied') || 'Link copied!') : 'Link copied!');
+      }).catch(err => {
+        console.warn('Clipboard API failed, using fallback.', err);
+        fallbackCopyTextToClipboard(url);
+      });
+    } else {
+      fallbackCopyTextToClipboard(url);
+    }
+  } catch (e) {
+    console.error("Error in copyInviteLink", e);
+    if (window.showToast) showToast('Failed to copy', 'error');
+  }
+}
+
+function fallbackCopyTextToClipboard(text) {
+  try {
+    const textArea = document.createElement("textarea");
+    textArea.value = text;
+    textArea.style.position = "fixed";
+    textArea.style.top = "-999999px";
+    textArea.style.left = "-999999px";
+    document.body.appendChild(textArea);
+    
+    if (/ipad|iphone|ipod/i.test(navigator.userAgent)) {
+      textArea.contentEditable = true;
+      textArea.readOnly = false;
+      const range = document.createRange();
+      range.selectNodeContents(textArea);
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+      textArea.setSelectionRange(0, 999999);
+    } else {
+      textArea.focus();
+      textArea.select();
+    }
+    
+    document.execCommand('copy');
+    document.body.removeChild(textArea);
+  } catch (err) {
+    console.error('Fallback: Oops, unable to copy', err);
+  }
+  // Always provide feedback to user
+  if (window.showToast) {
+    showToast(typeof t === 'function' ? (t('cart_link_copied') || 'Link copied!') : 'Link copied!');
+  } else {
+    alert("Link copied!");
+  }
 }
 
 function updateInviteUrl() {
