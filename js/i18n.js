@@ -1470,10 +1470,11 @@ function updateStaticTexts() {
 
 // ── LANGUAGE SELECTOR INJECTION ──
 document.addEventListener("DOMContentLoaded", () => {
+  const navbar = document.querySelector('.navbar');
   const navbarActions = document.querySelector('.navbar-actions');
-  if (navbarActions) {
+  if (navbar && navbarActions) {
     const langSelectorHTML = `
-      <div class="lang-selector" id="langSelectorWrap" style="position:relative;margin-right:.5rem;">
+      <div class="lang-selector" id="langSelectorWrap" style="position:relative;">
         <button onclick="toggleLangDropdown(event)" style="
           display:inline-flex;align-items:center;gap:4px;
           padding:6px 12px;background:var(--white);
@@ -1497,7 +1498,7 @@ document.addEventListener("DOMContentLoaded", () => {
         </div>
       </div>
     `;
-    navbarActions.insertAdjacentHTML('afterbegin', langSelectorHTML);
+    navbarActions.insertAdjacentHTML('beforebegin', langSelectorHTML);
   }
 
   // Initial translation
